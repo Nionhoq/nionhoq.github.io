@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nion Hoq — EDI & Supply Chain Integration | Founder & Consultant</title>
+<meta name="description" content="Nion (Ehteshum-ul) Hoq, M.Eng PMP — EDI / ERP integration specialist, supply chain technologist, founder of BrenneBeau, and consultant. 10+ years in IT, 7+ in EDI/ERP integration." />
+<meta name="author" content="Nion Hoq" />
+<meta property="og:title" content="Nion Hoq — EDI & Supply Chain Integration | Founder & Consultant" />
+<meta property="og:description" content="10+ years in IT, 7+ in EDI/ERP integration. SAP S/4HANA, AS2, SQL, AWS. Founder of BrenneBeau." />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="assets/portrait.jpeg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#070707;            /* black */
+    --bg-2:#0e0e0e;
+    --card:#121212;
+    --card-2:#171717;
+    --line:#262626;
+    --text:#f4f4f0;          /* white */
+    --muted:#9a9a96;
+    --green:#22e06b;         /* green */
+    --green-2:#15b757;
+    --green-soft:rgba(34,224,107,.10);
+    --radius:20px;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+  h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif;line-height:1.14;letter-spacing:-.01em;font-weight:700}
+  .mono{font-family:'Space Grotesk',monospace}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 26px}
+  .green{color:var(--green)}
+
+  /* film grain texture */
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.035;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* ===== nav ===== */
+  header{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);background:rgba(7,7,7,.7);border-bottom:1px solid transparent;transition:.3s}
+  header.scrolled{border-color:var(--line)}
+  nav{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .brand{font-weight:700;font-size:1.2rem;display:flex;align-items:center;gap:11px}
+  .brand .mark{width:30px;height:30px;border-radius:8px;background:var(--green);color:#04140a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;transform:rotate(-6deg)}
+  .nav-links{display:flex;gap:28px;font-size:.92rem;font-weight:500;align-items:center}
+  .nav-links a{color:var(--muted);position:relative;transition:color .2s}
+  .nav-links a:not(.nav-cta)::after{content:"";position:absolute;left:0;bottom:-5px;width:0;height:2px;background:var(--green);transition:width .25s}
+  .nav-links a:not(.nav-cta):hover{color:var(--text)}
+  .nav-links a:not(.nav-cta):hover::after{width:100%}
+  .nav-cta{background:var(--green);color:#04140a !important;padding:10px 19px;border-radius:999px;font-weight:600;transition:transform .2s,box-shadow .2s}
+  .nav-cta:hover{transform:translateY(-2px);box-shadow:0 10px 26px -8px var(--green)}
+  .burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:0}
+  .burger span{width:25px;height:2px;background:var(--text)}
+
+  /* ===== hero (bento) ===== */
+  .hero{padding:70px 0 40px}
+  .hero-grid{display:grid;grid-template-columns:1.35fr .9fr;gap:26px;align-items:stretch}
+  .pill{display:inline-flex;align-items:center;gap:9px;font-size:.8rem;font-weight:600;color:var(--green);border:1px solid var(--line);background:var(--green-soft);padding:8px 15px;border-radius:999px;letter-spacing:.02em}
+  .pill .ping{width:8px;height:8px;border-radius:50%;background:var(--green);animation:ping 1.6s infinite}
+  @keyframes ping{0%{box-shadow:0 0 0 0 rgba(34,224,107,.6)}70%{box-shadow:0 0 0 11px rgba(34,224,107,0)}100%{box-shadow:0 0 0 0 rgba(34,224,107,0)}}
+  .hero h1{font-size:clamp(2.2rem,5vw,3.7rem);font-weight:700;margin:24px 0 0;line-height:1.12}
+  .hero h1 .green{color:var(--green)}
+  .hero p.lead{font-size:clamp(1.05rem,1.6vw,1.2rem);color:var(--muted);max-width:560px;margin-top:24px}
+  .hero-cta{display:flex;gap:13px;flex-wrap:wrap;margin-top:30px}
+  .btn{padding:14px 26px;border-radius:999px;font-weight:600;font-size:.97rem;transition:transform .2s,box-shadow .2s,background .2s,color .2s;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:9px}
+  .btn-primary{background:var(--green);color:#04140a}
+  .btn-primary:hover{transform:translateY(-3px);box-shadow:0 14px 32px -10px var(--green)}
+  .btn-ghost{background:transparent;border-color:var(--line);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+
+  /* portrait card */
+  .portrait{position:relative;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);background:var(--card);min-height:340px;display:flex;align-items:flex-end}
+  .portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+  .portrait .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);background:repeating-linear-gradient(45deg,#101010,#101010 12px,#141414 12px,#141414 24px);text-align:center;padding:20px;font-size:.85rem}
+  .portrait .ph .big{font-family:'Space Grotesk';font-size:3rem;color:var(--green);opacity:.5;font-weight:700}
+  .portrait .cap{position:relative;z-index:2;width:100%;padding:18px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-family:'Space Grotesk';font-size:.85rem;color:var(--text)}
+  .portrait .cap b{color:var(--green)}
+
+  /* marquee ticker */
+  .ticker{border-block:1px solid var(--line);margin-top:46px;padding:18px 0;overflow:hidden;white-space:nowrap;background:var(--bg-2)}
+  .ticker-track{display:inline-flex;gap:46px;animation:scroll 26s linear infinite;font-family:'Space Grotesk';font-weight:700;font-size:1.35rem;text-transform:uppercase}
+  .ticker-track span{color:var(--muted)}
+  .ticker-track span::after{content:"·";color:var(--green);margin-left:46px}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+
+  /* ===== sections ===== */
+  section{padding:88px 0;position:relative}
+  .sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:50px;flex-wrap:wrap}
+  .sec-no{font-family:'Space Grotesk';font-size:.95rem;color:var(--green);font-weight:600;border:1px solid var(--line);border-radius:999px;padding:5px 13px}
+  .sec-head h2{font-size:clamp(1.9rem,4vw,2.9rem);font-weight:700;flex:1;min-width:280px;font-style:italic}
+  .sec-head .sub{color:var(--muted);width:100%;max-width:620px;font-size:1.05rem}
+
+  /* about */
+  .about-grid{display:grid;grid-template-columns:1fr;gap:46px;align-items:center;max-width:720px;margin-left:auto}
+  .about-photo{border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);background:var(--card);aspect-ratio:4/5;position:relative;display:flex;align-items:center;justify-content:center}
+  .about-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .about-photo .ph{color:var(--muted);text-align:center;font-size:.85rem;padding:24px;background:repeating-linear-gradient(45deg,#101010,#101010 12px,#141414 12px,#141414 24px);position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+  .about-text p{color:var(--muted);margin-bottom:16px;font-size:1.06rem}
+  .about-text p strong{color:var(--text)}
+  .fact-row{display:flex;gap:40px;margin-top:28px;flex-wrap:wrap}
+  .fact .n{font-family:'Space Grotesk';font-size:2.4rem;font-weight:700;color:var(--green)}
+  .fact .l{color:var(--muted);font-size:.85rem}
+
+  /* timeline */
+  .timeline{position:relative;padding-left:32px}
+  .timeline::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--green),transparent)}
+  .tl-item{position:relative;margin-bottom:36px}
+  .tl-item::before{content:"";position:absolute;left:-32px;top:5px;width:16px;height:16px;border-radius:50%;background:var(--bg);border:3px solid var(--green)}
+  .tl-item .role{font-family:'Space Grotesk';font-weight:700;font-size:1.15rem}
+  .tl-item .org{color:var(--green);font-weight:600;font-size:.95rem}
+  .tl-item .when{color:var(--muted);font-size:.84rem;margin:2px 0 8px;font-family:'Space Grotesk'}
+  .tl-item p{color:var(--muted);font-size:.98rem}
+
+  /* bento */
+  .bento{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .bento .b{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:28px;transition:transform .25s,border-color .25s;position:relative;overflow:hidden}
+  .bento .b:hover{transform:translateY(-6px);border-color:var(--green)}
+  .bento .b.wide{grid-column:span 2}
+  .bento .b .ic{font-size:1.7rem;margin-bottom:14px;display:block}
+  .bento .b h3{font-size:1.18rem;margin-bottom:8px}
+  .bento .b p{color:var(--muted);font-size:.97rem}
+  .bento .b .num{position:absolute;top:18px;right:22px;font-family:'Space Grotesk';color:var(--line);font-size:1.4rem;font-weight:700}
+
+  /* certs */
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .cert{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px;display:flex;gap:16px;align-items:center;transition:.25s}
+  .cert:hover{border-color:var(--green);transform:translateY(-4px)}
+  .cert .badge{flex:0 0 56px;height:56px;border-radius:14px;background:var(--green);color:#04140a;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:.95rem}
+  .cert h3{font-size:1.05rem}
+  .cert span{color:var(--muted);font-size:.85rem;font-family:'Space Grotesk'}
+
+  /* skills */
+  .skill-group{margin-bottom:30px}
+  .skill-group h4{font-size:1.02rem;margin-bottom:14px;display:flex;align-items:center;gap:9px;text-transform:uppercase;font-family:'Space Grotesk';letter-spacing:.04em}
+  .skill-group h4::before{content:"";width:10px;height:10px;background:var(--green)}
+  .chips{display:flex;flex-wrap:wrap;gap:9px}
+  .chip{background:var(--card-2);border:1px solid var(--line);padding:9px 15px;border-radius:8px;font-size:.86rem;font-weight:500;font-family:'Space Grotesk';transition:.2s}
+  .chip:hover{border-color:var(--green);color:var(--green);transform:translateY(-2px)}
+
+  /* founder */
+  .founder{background:var(--green);color:#04140a;border-radius:26px;padding:54px;position:relative;overflow:hidden}
+  .founder .sec-no{color:#04140a;border-color:rgba(0,0,0,.25)}
+  .founder h2{font-size:clamp(1.7rem,3.4vw,2.5rem);max-width:760px;margin:14px 0 18px;color:#04140a}
+  .founder p{max-width:680px;font-size:1.06rem;margin-bottom:12px;color:#0a2a18}
+  .founder .btn-dark{background:#04140a;color:var(--green);margin-top:22px}
+  .founder .btn-dark:hover{transform:translateY(-3px)}
+  .founder .watermark{position:absolute;right:-20px;bottom:-46px;font-family:'Space Grotesk';font-weight:700;font-size:11rem;opacity:.08;line-height:1;letter-spacing:-.04em}
+
+  /* store strip */
+  .store-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:26px}
+  .store-strip .prod{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:transform .25s,border-color .25s}
+  .store-strip .prod:hover{transform:translateY(-6px);border-color:var(--green)}
+  .store-strip .prod img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:var(--card-2)}
+  .store-strip .meta{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 15px;font-size:.85rem}
+  .store-strip .meta span{color:var(--muted)}
+  .store-strip .meta b{color:var(--green);font-family:'Space Grotesk';white-space:nowrap}
+  @media(max-width:760px){.store-strip{grid-template-columns:1fr 1fr}}
+
+  /* contact */
+  .contact-card{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:48px;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+  .contact-card h2{font-size:clamp(1.9rem,3.6vw,2.8rem);margin-bottom:14px}
+  .contact-card .sub{color:var(--muted);margin-bottom:24px}
+  .cc-cta{display:flex;gap:13px;flex-wrap:wrap}
+  .info-row{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);font-size:.96rem}
+  .info-row:last-child{border-bottom:0}
+  .info-row span:first-child{color:var(--muted);font-family:'Space Grotesk'}
+  .info-row a{font-weight:600}
+
+  footer{border-top:1px solid var(--line);padding:36px 0;color:var(--muted);font-size:.86rem;font-family:'Space Grotesk'}
+
+  .reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  @media(max-width:900px){
+    .nav-links{position:fixed;inset:72px 0 auto 0;background:var(--bg-2);flex-direction:column;padding:26px;gap:20px;border-bottom:1px solid var(--line);transform:translateY(-130%);transition:transform .35s;z-index:50}
+    .nav-links.open{transform:translateY(0)}
+    .burger{display:flex}
+    .hero-grid,.about-grid,.contact-card{grid-template-columns:1fr}
+    .bento{grid-template-columns:1fr 1fr}
+    .bento .b.wide{grid-column:span 2}
+    .grid2{grid-template-columns:1fr}
+  }
+  @media(max-width:560px){.bento{grid-template-columns:1fr}.bento .b.wide{grid-column:span 1}.founder{padding:34px}.contact-card{padding:30px}}
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<header id="top">
+  <div class="wrap">
+    <nav>
+      <a href="#top" class="brand"><span class="mark">N</span>Nion&nbsp;Hoq</a>
+      <div class="nav-links" id="navLinks">
+        <a href="#about">About</a>
+        <a href="#journey">Journey</a>
+        <a href="#expertise">Expertise</a>
+        <a href="#certs">Certs</a>
+        <a href="#projects">Work</a>
+        <a href="#founder">BrenneBeau</a>
+        <a href="#contact" class="nav-cta">Get in touch</a>
+      </div>
+      <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+    </nav>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="pill"><span class="ping"></span>Open to consulting &amp; senior roles</span>
+        <h1>I make <span class="green">supply chains</span> talk to each other.</h1>
+        <p class="lead">Nion Hoq, M.Eng — EDI &amp; ERP integration specialist with 10+ years in IT and 7+ wiring retailers, suppliers and ERPs together across SAP, AS2 and the cloud. Founder of BrenneBeau, consultant, and the person teams call when the data has to flow.</p>
+        <div class="hero-cta">
+          <a href="#contact" class="btn btn-primary">Work with me →</a>
+          <a href="#projects" class="btn btn-ghost">See the work</a>
+        </div>
+      </div>
+
+      <!-- PORTRAIT: image lives at assets/portrait.jpeg -->
+      <div class="portrait">
+        <img src="assets/portrait.jpeg" alt="Nion Hoq" onload="this.nextElementSibling.style.display='none'" onerror="this.style.display='none'" />
+        <div class="ph"><span class="big">N</span>Add your photo at<br><b class="mono">assets/portrait.jpeg</b></div>
+        <div class="cap"><b>Nion Hoq</b> · EDI &amp; Supply-Chain Integration · Ontario, Canada</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ticker -->
+  <div class="ticker">
+    <div class="ticker-track">
+      <span>SAP S/4HANA</span><span>AS2 / SFTP</span><span>ANSI X12</span><span>EDIFACT</span><span>IDOC</span><span>SQL / PL-SQL</span><span>AWS</span><span>ITIL v4</span><span>PMP</span>
+      <span>SAP S/4HANA</span><span>AS2 / SFTP</span><span>ANSI X12</span><span>EDIFACT</span><span>IDOC</span><span>SQL / PL-SQL</span><span>AWS</span><span>ITIL v4</span><span>PMP</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ABOUT ===== -->
+<section id="about">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="sec-no">01</span><h2>About</h2><div class="sub">Fluent in the technical detail of EDI and ERP — and in the supply-chain business that depends on it.</div></div>
+    <div class="about-grid">
+      <div class="about-text reveal">
+        <p>I sit at the intersection most companies struggle to staff: <strong>technical enough to own AS2 connectivity, X12/EDIFACT mapping and IDOC flows into SAP S/4HANA — and commercial enough to explain why any of it matters to the business.</strong></p>
+        <p>Over a decade I've moved from hands-on analyst to integration consultant leading Tier-2/3 support, training stakeholders, and authoring the C-level presentations that turn a technical incident into a clear decision.</p>
+        <p>Now I'm deepening the data side — <strong>SQL/PL-SQL and AWS</strong> — to take integration from "it transmits" to "it's observable, queryable and reliable." That EDI-to-SQL transition is the edge I bring to modern supply-chain teams.</p>
+        <div class="fact-row">
+          <div class="fact"><div class="n">10+</div><div class="l">years in IT</div></div>
+          <div class="fact"><div class="n">7+</div><div class="l">years EDI/ERP</div></div>
+          <div class="fact"><div class="n">4+</div><div class="l">certifications</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== JOURNEY ===== -->
+<section id="journey" style="background:var(--bg-2)">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="sec-no">02</span><h2>Journey</h2><div class="sub">A decade building integrations that businesses run on.</div></div>
+    <div class="timeline">
+      <div class="tl-item reveal"><div class="role">Senior Application &amp; EDI Analyst</div><div class="org">CGI Canada</div><div class="when">Jul 2024 — Present</div><p>Lead EDI/ERP integration for enterprise retail clients, owning end-to-end AS2/SFTP onboarding across SAP S/4HANA and D365. Resolve 20+ monthly Tier-2/3 escalations while authoring C-level reporting that drives integration roadmap decisions.</p></div>
+      <div class="tl-item reveal"><div class="role">Integration Consultant &amp; Client Support (Remote)</div><div class="org">Körber Supply Chain, USA</div><div class="when">Apr 2021 — Mar 2024</div><p>Led a Tier-2/3 support team delivering supply-chain integration for North American clients, cutting escalation resolution time and acting as primary technical escalation point. Owned client relationships from onboarding through steady-state, translating complex EDI requirements into reliable production workflows.</p></div>
+      <div class="tl-item reveal"><div class="role">Integration Analyst, EDI &amp; Client Management</div><div class="org">CGI</div><div class="when">Feb 2019 — Apr 2021</div><p>Managed EDI integration and client delivery across ANSI X12 and EDIFACT standards, coordinating cross-functional teams under ITIL practices. Trained client stakeholders and standardized onboarding, reducing recurring partner setup errors.</p></div>
+      <div class="tl-item reveal"><div class="role">Application &amp; EDI Analyst</div><div class="org">Edisoft Inc</div><div class="when">Nov 2017 — Feb 2019</div><p>Built and supported EDI integrations connecting retail trading partners to ERP systems via mapping tools and VANs. Diagnosed and resolved production transaction failures, ensuring uninterrupted order-to-cash flow for retail clients.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== EXPERTISE (bento) ===== -->
+<section id="expertise">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="sec-no">03</span><h2>Expertise</h2><div class="sub">Whether as an employee or a consultant, these are the problems I'm hired to solve.</div></div>
+    <div class="bento">
+      <div class="b wide reveal"><span class="num">01</span><span class="ic">🔗</span><h3>EDI &amp; Trading-Partner Integration</h3><p>End-to-end onboarding and mapping across ANSI X12, EDIFACT, cXML and IDOC — with AS2, SFTP and FTPS connectivity that holds up in production, not just in test.</p></div>
+      <div class="b reveal"><span class="num">02</span><span class="ic">🏭</span><h3>ERP Integration</h3><p>Wiring EDI into SAP S/4HANA, Sage 300/X3, Dynamics D365 and AS400 so orders, ASNs and invoices flow without manual touch.</p></div>
+      <div class="b reveal"><span class="num">03</span><span class="ic">🧭</span><h3>Tier-2/3 Support</h3><p>Escalation management, root-cause analysis and the stakeholder comms that turn outages into resolved, documented incidents.</p></div>
+      <div class="b reveal"><span class="num">04</span><span class="ic">🗄️</span><h3>Data &amp; SQL</h3><p>Growing PL/SQL and scripting to make integration data observable, queryable and auditable.</p></div>
+      <div class="b wide reveal"><span class="num">05</span><span class="ic">📊</span><h3>Delivery &amp; Stakeholder Leadership</h3><p>PMP- and ITIL-grounded delivery: leading small teams, training stakeholders, and authoring the C-level presentations that drive decisions. AWS-certified, with cloud thinking applied to integration reliability and AI-assisted tooling.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CERTS ===== -->
+<section id="certs" style="background:var(--bg-2)">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="sec-no">04</span><h2>Certifications</h2><div class="sub">Credentials that back the work.</div></div>
+    <div class="grid2">
+      <div class="cert reveal"><div class="badge">AWS</div><div><h3>AWS Certified AI Practitioner</h3><span>Amazon Web Services · 2026</span></div></div>
+      <div class="cert reveal"><div class="badge">PMP</div><div><h3>Project Management Professional</h3><span>Project Management Institute (PMI)</span></div></div>
+      <div class="cert reveal"><div class="badge">AWS</div><div><h3>AWS Certified Cloud Practitioner</h3><span>Amazon Web Services</span></div></div>
+      <div class="cert reveal"><div class="badge">ITIL</div><div><h3>ITIL v4 Foundation (Intermediate)</h3><span>IT service management</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SKILLS ===== -->
+<section id="skills">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="sec-no">05</span><h2>Toolbox</h2><div class="sub">The technologies I reach for.</div></div>
+    <div class="grid2" style="gap:36px">
+      <div class="skill-group reveal"><h4>EDI &amp; Integration</h4><div class="chips"><span class="chip">ANSI X12</span><span class="chip">EDIFACT</span><span class="chip">IDOC</span><span class="chip">cXML / XML</span><span class="chip">AS2</span><span class="chip">SFTP / FTPS</span><span class="chip">TrueCommerce</span><span class="chip">SPS Commerce</span><span class="chip">Cleo</span><span class="chip">IBM Sterling</span><span class="chip">OpenText VAN</span><span class="chip">Trusted Link</span><span class="chip">MapForce</span></div></div>
+      <div class="skill-group reveal"><h4>ERP &amp; Platforms</h4><div class="chips"><span class="chip">SAP S/4HANA</span><span class="chip">Sage 300 / X3</span><span class="chip">Dynamics D365</span><span class="chip">AS400</span></div></div>
+      <div class="skill-group reveal"><h4>Data, Cloud &amp; Scripting</h4><div class="chips"><span class="chip">SQL / PL-SQL</span><span class="chip">Shell / Bash</span><span class="chip">AWS EC2</span><span class="chip">Basic programming</span></div></div>
+      <div class="skill-group reveal"><h4>Delivery &amp; Tooling</h4><div class="chips"><span class="chip">Jira</span><span class="chip">Confluence</span><span class="chip">ServiceNow</span><span class="chip">Monday.com</span><span class="chip">MS Project / Visio</span><span class="chip">ITIL v4</span><span class="chip">PMP</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PROJECTS ===== -->
+<section id="projects" style="background:var(--bg-2)">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="sec-no">06</span><h2>Selected Work</h2><div class="sub">Representative outcomes from real engagements. <!-- EDIT: swap in specific client names, metrics or links once you're comfortable sharing them --></div></div>
+    <div class="bento">
+      <div class="b reveal"><span class="ic">📦</span><h3>Retail Partner Onboarding</h3><p>Stood up new ANSI X12 trading partners end to end — POs, ASNs, invoices — cutting manual handling and compliance chargebacks.</p></div>
+      <div class="b wide reveal"><span class="ic">🛠️</span><h3>Tier-2/3 Integration Lead</h3><p>Led a two-person escalation team at Körber, owning complex AS2/EDI/ERP incidents across a global client base with documented root-cause resolution.</p></div>
+      <div class="b wide reveal"><span class="ic">🔄</span><h3>EDI → SAP S/4HANA Flows</h3><p>Mapped and validated IDOC-based document flows into SAP S/4HANA, keeping order-to-cash moving without manual intervention.</p></div>
+      <div class="b reveal"><span class="ic">🧩</span><h3>Multi-VAN Connectivity</h3><p>Configured and troubleshot connectivity across OpenText VAN, IBM Sterling, SPS Commerce and Cleo.</p></div>
+      <div class="b reveal"><span class="ic">📈</span><h3>Escalation Program</h3><p>20+ monthly escalations at CGI, translated into business updates and C-level presentations.</p></div>
+      <div class="b wide reveal"><span class="ic">💡</span><h3>EDI-to-SQL Observability <span class="green" style="font-size:.8rem">(in progress)</span></h3><p>Building SQL/PL-SQL tooling to query and audit integration data — turning opaque transmission logs into evidence teams can act on.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOUNDER / BRENNEBEAU ===== -->
+<section id="founder">
+  <div class="wrap">
+    <div class="founder reveal">
+      <span class="sec-no">07</span>
+      <h2>BrenneBeau — I built &amp; ran the supply chain, not just the integration</h2>
+      <p>I'm the founder and owner of <strong>BrenneBeau</strong> (<a href="https://brennebeau.com" target="_blank" rel="noopener" style="color:#04140a;text-decoration:underline">brennebeau.com</a>) — a direct-to-consumer brand of premium, European-inspired genuine-leather boots for women. I took it from idea to live store: brand, catalog, storefront, payments, fulfillment and operations.</p>
+      <p>I designed the line around European cities — Madrid, Zurich, Barcelona, Munich — built and <strong>deployed the full Shopify store myself</strong>, photographed and merchandised 13+ styles priced CAD&nbsp;$130–$300, configured checkout and shipping, and have run the whole operation since launch in 2024.</p>
+      <p style="font-weight:600;color:#04140a">It's the other half of my story: I don't just integrate other companies' supply chains — I've owned an entire retail supply chain end to end.</p>
+      <a href="https://brennebeau.com" target="_blank" rel="noopener" class="btn btn-dark">Visit BrenneBeau →</a>
+      <div class="watermark">BRENNEBEAU</div>
+    </div>
+
+    <!-- "How I built it" pillars -->
+    <div class="bento" style="margin-top:26px">
+      <div class="b reveal"><span class="ic">🏗️</span><h3>Built &amp; deployed on Shopify</h3><p>Stood up the storefront end to end on Shopify — theme, navigation, product pages, custom domain (brennebeau.com), payments and checkout — and shipped it live.</p></div>
+      <div class="b reveal"><span class="ic">👢</span><h3>Brand &amp; product line</h3><p>Created the BrenneBeau brand and a 13-style women's leather boot collection, each named after a European city, with merchandising and pricing strategy.</p></div>
+      <div class="b reveal"><span class="ic">📦</span><h3>Operations &amp; fulfillment</h3><p>Owns catalog, inventory, supplier sourcing, order fulfillment and customer experience — the real retail supply chain behind the storefront.</p></div>
+    </div>
+
+    <!-- live product strip pulled from the store -->
+    <div class="store-strip">
+      <a class="prod reveal" href="https://brennebeau.com/products/madrid-black-knee-high-boots" target="_blank" rel="noopener">
+        <img src="https://cdn.shopify.com/s/files/1/0684/9465/5727/files/IMG_0143.jpg?v=1713471006&width=500" alt="Madrid black knee-high leather boots" loading="lazy" />
+        <div class="meta"><span>Madrid — Black</span><b>CAD $299.99</b></div>
+      </a>
+      <a class="prod reveal" href="https://brennebeau.com/products/brussels-brown-block-heel-boots" target="_blank" rel="noopener">
+        <img src="https://cdn.shopify.com/s/files/1/0684/9465/5727/files/IMG_0042_e7d1ec35-bd4a-4df1-8803-6aaab7f44244.jpg?v=1713469755&width=500" alt="Brussels brown block heel boots" loading="lazy" />
+        <div class="meta"><span>Brussels — Brown</span><b>CAD $279.99</b></div>
+      </a>
+      <a class="prod reveal" href="https://brennebeau.com/products/barcelona-leather-lace-up-boots" target="_blank" rel="noopener">
+        <img src="https://cdn.shopify.com/s/files/1/0684/9465/5727/files/IMG_0002.jpg?v=1713469056&width=500" alt="Barcelona leather lace-up boots" loading="lazy" />
+        <div class="meta"><span>Barcelona</span><b>CAD $289.99</b></div>
+      </a>
+      <a class="prod reveal" href="https://brennebeau.com/products/zurich-leather-block-heel-boots" target="_blank" rel="noopener">
+        <img src="https://cdn.shopify.com/s/files/1/0684/9465/5727/files/IMG_0043_b87c1305-5d78-45eb-8d99-c4ecd2ad39ac.jpg?v=1713471295&width=500" alt="Zurich snake-scale leather block heel boots" loading="lazy" />
+        <div class="meta"><span>Zurich</span><b>CAD $209.99</b></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CONTACT ===== -->
+<section id="contact">
+  <div class="wrap">
+    <div class="contact-card reveal">
+      <div>
+        <span class="sec-no">08</span>
+        <h2 style="margin-top:14px">Let's build something that works</h2>
+        <p class="sub">Consulting engagement, senior role, or a quick conversation — I'm open to all three.</p>
+        <div class="cc-cta">
+          <a href="mailto:ehoq.daika@gmail.com" class="btn btn-primary">Email me</a>
+        </div>
+      </div>
+      <div>
+        <div class="info-row"><span>Email</span><a href="mailto:ehoq.daika@gmail.com" class="green">nion.texconnect@gmail.com</a></div>
+        <div class="info-row"><span>Location</span><span>Ontario, Canada · Remote</span></div>
+        <div class="info-row"><span>BrenneBeau</span><a href="https://brennebeau.com" target="_blank" rel="noopener" class="green">brennebeau.com</a></div>
+        <div class="info-row"><span>LinkedIn</span><a href="https://www.linkedin.com/in/ehteshum-ul-hoq-98027149/" target="_blank" rel="noopener" class="green">linkedin.com/in/ehteshum-ul-hoq-98027149/</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <span>© <span id="year"></span> Nion Hoq</span>
+    <span>EDI &amp; Supply-Chain Integration · Founder of BrenneBeau · Consultant</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+  const header = document.querySelector('header');
+  addEventListener('scroll', () => header.classList.toggle('scrolled', scrollY > 12));
+  const burger = document.getElementById('burger'), navLinks = document.getElementById('navLinks');
+  burger.addEventListener('click', () => navLinks.classList.toggle('open'));
+  navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
+  const io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);} }), {threshold:.14});
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
