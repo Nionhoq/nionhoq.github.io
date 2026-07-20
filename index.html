@@ -58,8 +58,8 @@
   .burger span{width:25px;height:2px;background:var(--text)}
 
   /* ===== hero (bento) ===== */
-  .hero{padding:70px 0 40px}
-  .hero-grid{display:grid;grid-template-columns:1.35fr .9fr;gap:26px;align-items:stretch}
+  .hero{padding:56px 0 36px}
+  .hero-grid{display:grid;grid-template-columns:1.4fr .85fr;gap:30px;align-items:stretch}
   .pill{display:inline-flex;align-items:center;gap:9px;font-size:.8rem;font-weight:600;color:var(--green);border:1px solid var(--line);background:var(--green-soft);padding:8px 15px;border-radius:999px;letter-spacing:.02em}
   .pill .ping{width:8px;height:8px;border-radius:50%;background:var(--green);animation:ping 1.6s infinite}
   @keyframes ping{0%{box-shadow:0 0 0 0 rgba(34,224,107,.6)}70%{box-shadow:0 0 0 11px rgba(34,224,107,0)}100%{box-shadow:0 0 0 0 rgba(34,224,107,0)}}
@@ -89,7 +89,7 @@
   @keyframes scroll{to{transform:translateX(-50%)}}
 
   /* ===== sections ===== */
-  section{padding:88px 0;position:relative}
+  section{padding:96px 0;position:relative}
   .sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:50px;flex-wrap:wrap}
   .sec-no{font-family:'Space Grotesk';font-size:.95rem;color:var(--green);font-weight:600;border:1px solid var(--line);border-radius:999px;padding:5px 13px}
   .sec-head h2{font-size:clamp(1.9rem,4vw,2.9rem);font-weight:700;flex:1;min-width:280px;font-style:italic}
@@ -171,6 +171,35 @@
   .info-row span:first-child{color:var(--muted);font-family:'Space Grotesk'}
   .info-row a{font-weight:600}
 
+  /* blog */
+  .blog-filters{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:30px}
+  .bf{background:var(--card-2);border:1px solid var(--line);padding:8px 16px;border-radius:999px;font-size:.85rem;font-weight:600;font-family:'Space Grotesk';color:var(--muted);cursor:pointer;transition:.2s}
+  .bf:hover{border-color:var(--green);color:var(--green)}
+  .bf.on{background:var(--green);color:#04140a;border-color:var(--green)}
+  .blog-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .post-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:transform .25s,border-color .25s}
+  .post-card:hover{transform:translateY(-6px);border-color:var(--green)}
+  .post-card .p-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;font-family:'Space Grotesk';font-size:.8rem}
+  .post-card .p-tag{color:var(--green);border:1px solid var(--line);background:var(--green-soft);padding:4px 11px;border-radius:999px;font-weight:600}
+  .post-card .p-date{color:var(--muted)}
+  .post-card h3{font-size:1.15rem}
+  .post-card p{color:var(--muted);font-size:.95rem;flex:1}
+  .post-card .p-more{color:var(--green);font-weight:600;font-size:.88rem;font-family:'Space Grotesk'}
+  .blog-empty{color:var(--muted);text-align:center;padding:40px 0;grid-column:1/-1}
+  /* post reader */
+  .reader{position:fixed;inset:0;z-index:100;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);padding:60px 20px}
+  .reader.open{display:flex}
+  .reader-card{background:var(--card);border:1px solid var(--line);border-radius:26px;max-width:760px;width:100%;padding:44px;position:relative}
+  .reader-card .p-meta{display:flex;gap:14px;align-items:center;font-family:'Space Grotesk';font-size:.85rem;margin-bottom:16px}
+  .reader-card .p-tag{color:var(--green);border:1px solid var(--line);background:var(--green-soft);padding:4px 12px;border-radius:999px;font-weight:600}
+  .reader-card .p-date{color:var(--muted)}
+  .reader-card h2{font-size:clamp(1.5rem,3vw,2.1rem);margin-bottom:20px}
+  .reader-card .body p{color:var(--muted);font-size:1.03rem;margin-bottom:16px}
+  .reader-close{position:absolute;top:18px;right:20px;background:var(--card-2);border:1px solid var(--line);color:var(--text);width:38px;height:38px;border-radius:50%;font-size:1.1rem;cursor:pointer;transition:.2s}
+  .reader-close:hover{border-color:var(--green);color:var(--green)}
+  @media(max-width:900px){.blog-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.blog-grid{grid-template-columns:1fr}.reader-card{padding:28px}}
+
   footer{border-top:1px solid var(--line);padding:36px 0;color:var(--muted);font-size:.86rem;font-family:'Space Grotesk'}
 
   .reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
@@ -185,7 +214,38 @@
     .bento .b.wide{grid-column:span 2}
     .grid2{grid-template-columns:1fr}
   }
-  @media(max-width:560px){.bento{grid-template-columns:1fr}.bento .b.wide{grid-column:span 1}.founder{padding:34px}.contact-card{padding:30px}}
+  @media(max-width:560px){.bento{grid-template-columns:1fr}.bento .b.wide{grid-column:span 1}.founder{padding:34px}.contact-card{padding:30px}
+    section{padding:64px 0}.wrap{padding:0 20px}.hero{padding:36px 0 28px}
+    .ticker-track{font-size:1.05rem;gap:30px}.ticker-track span::after{margin-left:30px}
+    .hero h1.big{margin-top:16px}.hero p.lead{margin-top:18px}.hero-cta{margin-top:24px}.hero-stats{margin-top:28px}}
+
+  /* ===== hero v2 (ported cinematic look) ===== */
+  .hero{position:relative;overflow:hidden}
+  .hero-bg{position:absolute;inset:0;z-index:0;pointer-events:none;background:
+    radial-gradient(60% 90% at 15% 20%, rgba(34,224,107,.20), transparent 60%),
+    radial-gradient(50% 80% at 90% 10%, rgba(21,183,87,.16), transparent 55%),
+    radial-gradient(70% 90% at 80% 100%, rgba(34,224,107,.10), transparent 60%),
+    var(--bg);
+    background-size:200% 200%,200% 200%,200% 200%,100% 100%;
+    animation:heroDrift 22s ease-in-out infinite}
+  @keyframes heroDrift{0%{background-position:0% 50%,100% 0%,100% 100%,0 0}
+    50%{background-position:100% 50%,0% 100%,0% 0%,0 0}
+    100%{background-position:0% 50%,100% 0%,100% 100%,0 0}}
+  .hero-bg::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg,transparent 55%,var(--bg) 100%),
+      linear-gradient(90deg,transparent 70%,rgba(7,7,7,.6) 100%)}
+  .hero .wrap{position:relative;z-index:2}
+  .hero h1.big{font-weight:300;letter-spacing:-.02em;font-size:clamp(2.1rem,4.2vw,3.5rem);line-height:1.08;margin:22px 0 0}
+  .hero h1.big b{font-weight:600}
+  .hero-stats{display:flex;gap:44px;margin-top:38px;flex-wrap:wrap}
+  .hero-stats .hs .n{font-family:'Space Grotesk';font-weight:300;font-size:clamp(1.9rem,3vw,2.7rem);line-height:1;color:var(--green)}
+  .hero-stats .hs .l{color:var(--muted);font-size:.86rem;margin-top:7px}
+  /* scroll cue (rezo-zero inspired) */
+  .scroll-cue{display:flex;align-items:center;gap:10px;margin-top:54px;color:var(--muted);font-family:'Space Grotesk';font-size:.78rem;letter-spacing:.16em;text-transform:uppercase}
+  .scroll-cue .line{position:relative;width:52px;height:1px;background:var(--line);overflow:hidden}
+  .scroll-cue .line::after{content:"";position:absolute;left:0;top:0;height:100%;width:18px;background:var(--green);animation:cueSlide 2.2s ease-in-out infinite}
+  @keyframes cueSlide{0%{transform:translateX(-20px)}50%{transform:translateX(52px)}100%{transform:translateX(-20px)}}
+  @media(max-width:560px){.hero-stats{gap:26px}.scroll-cue{display:none}}
 </style>
 </head>
 <body>
@@ -202,6 +262,7 @@
         <a href="#certs">Certs</a>
         <a href="#projects">Work</a>
         <a href="#founder">BrenneBeau</a>
+        <a href="#blog">Blog</a>
         <a href="#contact" class="nav-cta">Get in touch</a>
       </div>
       <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
@@ -211,16 +272,23 @@
 
 <!-- ===== HERO ===== -->
 <section class="hero">
+  <div class="hero-bg" aria-hidden="true"></div>
   <div class="wrap">
     <div class="hero-grid">
       <div>
         <span class="pill"><span class="ping"></span>Open to consulting &amp; senior roles</span>
-        <h1>I make <span class="green">supply chains</span> talk to each other.</h1>
+        <h1 class="big">I make <b class="green">supply chains</b><br />talk to each other.</h1>
         <p class="lead">Nion Hoq, M.Eng — EDI &amp; ERP integration specialist with 10+ years in IT and 7+ wiring retailers, suppliers and ERPs together across SAP, AS2 and the cloud. Founder of BrenneBeau, consultant, and the person teams call when the data has to flow.</p>
         <div class="hero-cta">
           <a href="#contact" class="btn btn-primary">Work with me →</a>
           <a href="#projects" class="btn btn-ghost">See the work</a>
         </div>
+        <div class="hero-stats">
+          <div class="hs"><div class="n">10+</div><div class="l">Years in IT</div></div>
+          <div class="hs"><div class="n">7+</div><div class="l">Years EDI / ERP integration</div></div>
+          <div class="hs"><div class="n">20+</div><div class="l">Trading partners onboarded</div></div>
+        </div>
+        <a href="#about" class="scroll-cue"><span class="line"></span>Scroll</a>
       </div>
 
       <!-- PORTRAIT: image lives at assets/portrait.jpeg -->
@@ -370,12 +438,31 @@
   </div>
 </section>
 
+<!-- ===== BLOG ===== -->
+<section id="blog" style="background:var(--bg-2)">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="sec-no">08</span><h2>Weekly Notes</h2><div class="sub">A weekly post on whatever has my attention — EDI and integration war stories, my SQL learning journey, running BrenneBeau, and everything in between.</div></div>
+    <div class="blog-filters reveal" id="blogFilters"></div>
+    <div class="blog-grid" id="blogGrid"></div>
+  </div>
+</section>
+
+<!-- post reader overlay -->
+<div class="reader" id="reader">
+  <div class="reader-card">
+    <button class="reader-close" id="readerClose" aria-label="Close">✕</button>
+    <div class="p-meta"><span class="p-tag" id="rTag"></span><span class="p-date" id="rDate"></span></div>
+    <h2 id="rTitle"></h2>
+    <div class="body" id="rBody"></div>
+  </div>
+</div>
+
 <!-- ===== CONTACT ===== -->
 <section id="contact">
   <div class="wrap">
     <div class="contact-card reveal">
       <div>
-        <span class="sec-no">08</span>
+        <span class="sec-no">09</span>
         <h2 style="margin-top:14px">Let's build something that works</h2>
         <p class="sub">Consulting engagement, senior role, or a quick conversation — I'm open to all three.</p>
         <div class="cc-cta">
@@ -400,6 +487,63 @@
 </footer>
 
 <script>
+  /* =====================================================================
+     BLOG POSTS — add your new post at the TOP of this list each week.
+     Copy the block below, change the text, done. Paragraphs are separated
+     by "\n\n". Tags you can use: EDI & Integration, SQL Journey,
+     BrenneBeau, Personal — or invent a new one and the filter picks it up.
+  ===================================================================== */
+  const POSTS = [
+    {
+      title: "Why this blog exists",
+      date: "2026-07-09",
+      tag: "Personal",
+      summary: "One post a week, on whatever has my attention — work, learning, the store, or life. Here's the plan.",
+      body: "I spend my days making systems talk to each other, but a lot of what I learn never gets written down anywhere. This blog fixes that.\n\nThe plan is simple: one post every week. Some weeks it will be an EDI or integration problem I untangled. Some weeks it will be notes from my SQL and PL/SQL learning. Some weeks it will be what's happening at BrenneBeau, and some weeks it will be nothing to do with work at all.\n\nNo schedule beyond weekly, no theme beyond what's on my mind. If you want to talk about anything I write here, my email is at the bottom of the page."
+    },
+    {
+      title: "Sample post — replace me",
+      date: "2026-07-02",
+      tag: "EDI & Integration",
+      summary: "This is a placeholder so you can see how a second card looks. Delete it or overwrite it with your first real post.",
+      body: "This is a sample post. To replace it, open index.html, find the POSTS list near the bottom, and edit this block.\n\nEach post needs a title, a date (YYYY-MM-DD), a tag, a one-line summary for the card, and the body text. That's it."
+    }
+  ];
+
+  /* ---- blog rendering (no need to touch below this line) ---- */
+  const grid = document.getElementById('blogGrid'), filters = document.getElementById('blogFilters');
+  const reader = document.getElementById('reader');
+  let activeTag = 'All';
+  const fmtDate = d => new Date(d + 'T00:00:00').toLocaleDateString('en-CA', {year:'numeric', month:'short', day:'numeric'});
+  function renderFilters(){
+    const tags = ['All', ...new Set(POSTS.map(p => p.tag))];
+    filters.innerHTML = tags.map(t => `<button class="bf${t===activeTag?' on':''}" data-tag="${t}">${t}</button>`).join('');
+    filters.querySelectorAll('.bf').forEach(b => b.addEventListener('click', () => { activeTag = b.dataset.tag; renderFilters(); renderPosts(); }));
+  }
+  function renderPosts(){
+    const list = POSTS.filter(p => activeTag === 'All' || p.tag === activeTag)
+                      .sort((a,b) => b.date.localeCompare(a.date));
+    grid.innerHTML = list.length ? list.map((p,i) => `
+      <article class="post-card" data-i="${POSTS.indexOf(p)}">
+        <div class="p-meta"><span class="p-tag">${p.tag}</span><span class="p-date">${fmtDate(p.date)}</span></div>
+        <h3>${p.title}</h3><p>${p.summary}</p>
+        <span class="p-more">Read post →</span>
+      </article>`).join('') : '<div class="blog-empty">No posts yet in this category.</div>';
+    grid.querySelectorAll('.post-card').forEach(c => c.addEventListener('click', () => openPost(POSTS[+c.dataset.i])));
+  }
+  function openPost(p){
+    document.getElementById('rTag').textContent = p.tag;
+    document.getElementById('rDate').textContent = fmtDate(p.date);
+    document.getElementById('rTitle').textContent = p.title;
+    document.getElementById('rBody').innerHTML = p.body.split('\n\n').map(x => `<p>${x}</p>`).join('');
+    reader.classList.add('open'); document.body.style.overflow = 'hidden';
+  }
+  function closePost(){ reader.classList.remove('open'); document.body.style.overflow = ''; }
+  document.getElementById('readerClose').addEventListener('click', closePost);
+  reader.addEventListener('click', e => { if(e.target === reader) closePost(); });
+  addEventListener('keydown', e => { if(e.key === 'Escape') closePost(); });
+  renderFilters(); renderPosts();
+
   document.getElementById('year').textContent = new Date().getFullYear();
   const header = document.querySelector('header');
   addEventListener('scroll', () => header.classList.toggle('scrolled', scrollY > 12));
