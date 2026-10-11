@@ -1,0 +1,435 @@
+openapi: 3.1.0
+info:
+  title: Voice AI Platform API
+  version: 1.0.0
+  description: |
+    Three surfaces:
+      1. **VAPI → Edge** (`/vapi/*`): server messages from VAPI. Auth: `X-Vapi-Secret`.
+      2. **Edge → n8n** (`/webhook/vapi-*`): internal, HMAC-signed. Never internet-exposed.
+      3. **Admin** (`/v1/*`): tenant onboarding, consent capture, outbound jobs, DSARs. Auth: OAuth2
+         client credentials; every token is bound to exactly one tenant (`tenant_id` claim) and
+         the server ignores any tenant id in paths/bodies that disagrees with the token.
+
+    VAPI payload schemas below include only the fields this platform reads; VAPI sends more.
+servers:
+  - url: https://voice-edge.example.com
+    description: Edge worker (VAPI-facing)
+  - url: https://api.voice.example.com
+    description: Admin API
+
+security:
+  - adminOAuth: []
+
+tags:
+  - name: vapi
+  - name: internal
+  - name: admin
+
+paths:
+  /vapi/events:
+    post:
+      tags: [vapi]
+      summary: VAPI server messages (assistant-request, status-update, end-of-call-report, hang, transfer-destination-request)
+      security: [{ vapiSecret: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VapiServerMessage' }
+      responses:
+        '200':
+          description: Response depends on `message.type`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AssistantRequestResponse'
+                  - $ref: '#/components/schemas/TransferDestinationResponse'
+                  - $ref: '#/components/schemas/Ack'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Tenant could not be resolved from the dialed number. VAPI ends the call. }
+        '413': { description: Body over 1 MB. }
+
+  /vapi/tools:
+    post:
+      tags: [vapi]
+      summary: VAPI tool-calls
+      description: |
+        Must answer within the tool's `timeoutSeconds`. The edge enforces a 3.5 s internal deadline
+        and returns a speakable fallback rather than an error, so the caller never hears silence.
+        Idempotent on `toolCallId`.
+      security: [{ vapiSecret: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VapiServerMessage' }
+      responses:
+        '200':
+          description: One result per tool call, same order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ToolCallsResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /webhook/vapi-events:
+    post:
+      tags: [internal]
+      summary: Edge → n8n async events (n8n 01-vapi-events)
+      security: [{ edgeHmac: [], edgeTimestamp: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, message]
+              properties:
+                tenantId: { type: string, format: uuid }
+                message: { $ref: '#/components/schemas/VapiMessage' }
+      responses:
+        '202': { description: Accepted; processed asynchronously and idempotently. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /webhook/vapi-tools:
+    post:
+      tags: [internal]
+      summary: Edge → n8n system-of-record tool execution (n8n 03-tool-backends)
+      security: [{ edgeHmac: [], edgeTimestamp: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, callId, tool, args, toolCallId]
+              properties:
+                tenantId: { type: string, format: uuid }
+                callId: { type: string }
+                caller: { type: string, description: E.164 caller number (from VAPI, not the LLM). }
+                tool: { type: string, enum: [verify_identity, check_availability, book_appointment, log_callback_request] }
+                args: { type: object, additionalProperties: true }
+                toolCallId: { type: string }
+      responses:
+        '200':
+          description: Speakable result. For verify_identity, `result` is exactly `VERIFIED` or `NOT_VERIFIED`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result: { type: string, maxLength: 500 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/tenants/{tenantId}/consents:
+    post:
+      tags: [admin]
+      summary: Record consent (TCPA / CRTC / GDPR / PIPEDA)
+      description: Evidence is mandatory. Marketing purposes require `express_written`.
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsentCreate' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Consent' }
+        '409': { description: Active consent already exists for this contact/channel/purpose. }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /v1/tenants/{tenantId}/opt-outs:
+    post:
+      tags: [admin]
+      summary: Add a number to the tenant DNC list and revoke all voice_ai consents
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [e164, source]
+              properties:
+                e164: { $ref: '#/components/schemas/E164' }
+                source: { type: string, examples: ['sms:STOP', 'web_form', 'agent'] }
+      responses:
+        '204': { description: Applied. Idempotent. }
+
+  /v1/tenants/{tenantId}/outbound-jobs:
+    post:
+      tags: [admin]
+      summary: Enqueue outbound calls
+      description: |
+        Enqueue never checks compliance. The dialer re-checks consent, DNC and calling hours
+        **at dial time**, because consent can be revoked between upload and dial.
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [campaignId, purpose, contacts]
+              properties:
+                campaignId: { type: string }
+                purpose: { type: string, examples: [appointment_reminders] }
+                maxAttempts: { type: integer, minimum: 1, maximum: 5, default: 3 }
+                contacts:
+                  type: array
+                  maxItems: 5000
+                  items: { type: string, format: uuid }
+      responses:
+        '202':
+          description: Enqueued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enqueued: { type: integer }
+
+  /v1/tenants/{tenantId}/outbound-jobs/{jobId}:
+    get:
+      tags: [admin]
+      summary: Job status incl. compliance block reason
+      parameters:
+        - { $ref: '#/components/parameters/TenantId' }
+        - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OutboundJob' }
+        '404': { description: Not found (or belongs to another tenant). }
+
+  /v1/tenants/{tenantId}/dsar:
+    post:
+      tags: [admin]
+      summary: Open a data-subject request (GDPR Art. 15/17/20, PIPEDA access)
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, e164]
+              properties:
+                kind: { type: string, enum: [access, erasure, rectification, portability] }
+                e164: { $ref: '#/components/schemas/E164' }
+      responses:
+        '202':
+          description: Opened; `dueAt` is computed from jurisdiction (1 month GDPR, 30 days PIPEDA).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  dueAt: { type: string, format: date-time }
+
+components:
+  securitySchemes:
+    vapiSecret: { type: apiKey, in: header, name: X-Vapi-Secret }
+    edgeHmac:
+      type: apiKey
+      in: header
+      name: X-Edge-Signature
+      description: hex(HMAC-SHA256(key, X-Edge-Timestamp + "." + rawBody)); rejected if timestamp skew > 300 s.
+    edgeTimestamp: { type: apiKey, in: header, name: X-Edge-Timestamp }
+    adminOAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.voice.example.com/oauth/token
+          scopes:
+            consents:write: Record consents and opt-outs
+            outbound:write: Enqueue outbound calls
+            dsar:write: Open data-subject requests
+
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    Unauthorized:
+      description: Missing/invalid credentials.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Request failed validation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    E164:
+      type: string
+      pattern: '^\+[1-9][0-9]{6,14}$'
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        requestId: { type: string }
+
+    Ack:
+      type: object
+      properties:
+        ok: { type: boolean, const: true }
+
+    VapiServerMessage:
+      type: object
+      required: [message]
+      properties:
+        message: { $ref: '#/components/schemas/VapiMessage' }
+
+    VapiMessage:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [assistant-request, tool-calls, status-update, end-of-call-report, hang, transfer-destination-request]
+        call: { $ref: '#/components/schemas/VapiCall' }
+        phoneNumber:
+          type: object
+          properties:
+            id: { type: string }
+        toolCallList:
+          type: array
+          items: { $ref: '#/components/schemas/VapiToolCall' }
+        status: { type: string, description: 'status-update only (queued, ringing, in-progress, forwarding, ended)' }
+        endedReason: { type: string }
+        startedAt: { type: string, format: date-time }
+        endedAt: { type: string, format: date-time }
+        cost: { type: number }
+        analysis:
+          type: object
+          properties:
+            summary: { type: string }
+            structuredData: { type: object, additionalProperties: true }
+      additionalProperties: true
+
+    VapiCall:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [inboundPhoneCall, outboundPhoneCall, webCall] }
+        phoneNumberId: { type: string, description: 'Tenant resolution key.' }
+        customer:
+          type: object
+          properties:
+            number: { $ref: '#/components/schemas/E164' }
+        assistantOverrides:
+          type: object
+          properties:
+            metadata:
+              type: object
+              properties:
+                tenantId: { type: string, format: uuid }
+                jobId: { type: string, format: uuid }
+      additionalProperties: true
+
+    VapiToolCall:
+      type: object
+      required: [id, function]
+      properties:
+        id: { type: string, description: Idempotency key. }
+        type: { type: string, const: function }
+        function:
+          type: object
+          required: [name]
+          properties:
+            name: { type: string }
+            arguments:
+              description: Object, or JSON string on some VAPI versions. Untrusted (LLM-authored).
+              oneOf:
+                - type: object
+                - type: string
+
+    ToolCallsResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            required: [toolCallId]
+            properties:
+              toolCallId: { type: string }
+              result: { type: string, maxLength: 500, description: Speakable text. }
+              error: { type: string }
+
+    AssistantRequestResponse:
+      type: object
+      description: Either an inline assistant or a saved assistantId.
+      properties:
+        assistantId: { type: string }
+        assistant: { type: object, additionalProperties: true }
+        error: { type: string, description: Returning an error ends the call. }
+
+    TransferDestinationResponse:
+      type: object
+      required: [destination]
+      properties:
+        destination:
+          type: object
+          required: [type, number]
+          properties:
+            type: { type: string, const: number }
+            number: { $ref: '#/components/schemas/E164' }
+            message: { type: string }
+
+    ConsentCreate:
+      type: object
+      required: [contact, channel, purpose, consentType, lawfulBasis, evidenceUri, grantedAt]
+      properties:
+        contact:
+          type: object
+          required: [e164]
+          properties:
+            e164: { $ref: '#/components/schemas/E164' }
+            timezone: { type: string, description: 'IANA tz. Without it the dialer refuses to call.' }
+            regionCode: { type: string, examples: [US-FL, CA-ON] }
+            externalRef: { type: string }
+        channel: { type: string, enum: [voice_ai, sms, email] }
+        purpose: { type: string }
+        consentType: { type: string, enum: [express, express_written, implied_ebr] }
+        lawfulBasis: { type: string, enum: [consent, contract, legitimate_interest, legal_obligation] }
+        evidenceUri: { type: string, format: uri }
+        grantedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+
+    Consent:
+      allOf:
+        - $ref: '#/components/schemas/ConsentCreate'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            revokedAt: { type: [string, 'null'], format: date-time }
+
+    OutboundJob:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string }
+        status: { type: string, enum: [queued, dialing, completed, blocked, failed] }
+        blockedReason:
+          type: [string, 'null']
+          examples: [dnc, no_valid_consent, unknown_timezone, unknown_region, 'outside_hours:US-FL']
+        attemptNo: { type: integer }
+        nextAttemptAt: { type: string, format: date-time }
+        vapiCallId: { type: [string, 'null'] }

@@ -1,0 +1,298 @@
+{
+  "name": "Voice \u00b7 02 Outbound dialer (compliance-gated)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "677c8776-f7fc-5dad-bafd-56e2358e1613",
+      "name": "Every minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- tenants is not row-scoped; phone_numbers is, and app.tenant_id is left on the\n-- LAST tenant claimed, so never join RLS tables after claim_outbound_jobs here.\nSELECT j.*, t.vapi_assistant_id AS assistant_id, t.outbound_vapi_phone_id AS vapi_phone_id\nFROM voice.claim_outbound_jobs(10) j JOIN voice.tenants t ON t.id = j.tenant_id;",
+        "options": {
+          "queryReplacement": ""
+        }
+      },
+      "id": "f4f5de04-19f1-5d9b-99df-4b12dd29ffe3",
+      "name": "Claim due jobs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_PG_CREDENTIAL_ID",
+          "name": "voice_app (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM voice.can_dial_for($1::uuid, $2::uuid, $3);",
+        "options": {
+          "queryReplacement": "={{ [$json.tenant_id, $json.contact_id, $json.purpose] }}"
+        }
+      },
+      "id": "aa5f5259-6705-5254-9dec-0197a2526125",
+      "name": "Compliance gate (TCPA/CRTC/consent/DNC)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        440,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_PG_CREDENTIAL_ID",
+          "name": "voice_app (Postgres)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "d406430d-f8e9-5514-8e0e-e1d925a67724",
+              "leftValue": "={{ $json.allowed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7bb48836-ade2-5f1b-b58a-2455de1ffb42",
+      "name": "Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vapi.ai/call",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  assistantId: $('Claim due jobs').item.json.assistant_id,\n  phoneNumberId: $('Claim due jobs').item.json.vapi_phone_id,\n  customer: { number: $json.e164 },\n  assistantOverrides: { metadata: { tenantId: $('Claim due jobs').item.json.tenant_id, jobId: $('Claim due jobs').item.json.id, purpose: $('Claim due jobs').item.json.purpose } }\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "ee992c56-f369-566e-a3db-de9b71e34c70",
+      "name": "VAPI: create call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        200
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "REPLACE_VAPI_CREDENTIAL_ID",
+          "name": "VAPI private key"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT voice.finish_outbound_job($1::uuid, $2::uuid, 'dialed', NULL, $3);",
+        "options": {
+          "queryReplacement": "={{ [$('Claim due jobs').item.json.tenant_id, $('Claim due jobs').item.json.id, $json.id] }}"
+        }
+      },
+      "id": "5996bd9d-cf33-5f4d-b426-bc5635d46622",
+      "name": "Mark dialed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1100,
+        120
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_PG_CREDENTIAL_ID",
+          "name": "voice_app (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT voice.finish_outbound_job($1::uuid, $2::uuid, 'error', $3);",
+        "options": {
+          "queryReplacement": "={{ [$('Claim due jobs').item.json.tenant_id, $('Claim due jobs').item.json.id, String($json.error?.message || 'vapi_error').slice(0,200)] }}"
+        }
+      },
+      "id": "b227e361-4179-5dd1-88ad-e99e64360636",
+      "name": "Mark error (backoff)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1100,
+        280
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_PG_CREDENTIAL_ID",
+          "name": "voice_app (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT voice.finish_outbound_job($1::uuid, $2::uuid, 'blocked', $3);",
+        "options": {
+          "queryReplacement": "={{ [$('Claim due jobs').item.json.tenant_id, $('Claim due jobs').item.json.id, $json.reason] }}"
+        }
+      },
+      "id": "48f4e7be-57a5-5fb5-bfaf-3214ea2c01bc",
+      "name": "Mark blocked / reschedule",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        880,
+        420
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_PG_CREDENTIAL_ID",
+          "name": "voice_app (Postgres)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every minute": {
+      "main": [
+        [
+          {
+            "node": "Claim due jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim due jobs": {
+      "main": [
+        [
+          {
+            "node": "Compliance gate (TCPA/CRTC/consent/DNC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance gate (TCPA/CRTC/consent/DNC)": {
+      "main": [
+        [
+          {
+            "node": "Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed?": {
+      "main": [
+        [
+          {
+            "node": "VAPI: create call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark blocked / reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VAPI: create call": {
+      "main": [
+        [
+          {
+            "node": "Mark dialed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark error (backoff)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "errorWorkflow": "REPLACE_ERROR_WORKFLOW_ID",
+    "timezone": "UTC"
+  },
+  "pinData": {},
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "Claims due outbound_jobs fairly across tenants, runs voice.can_dial_for (consent, DNC, calling hours), places VAPI calls."
+  },
+  "tags": [
+    {
+      "name": "voice-ai"
+    }
+  ]
+}
