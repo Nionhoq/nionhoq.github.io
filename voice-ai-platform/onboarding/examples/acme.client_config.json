@@ -11,11 +11,62 @@
         "max_concurrent_calls": 50
       }
     ],
-    "failover_routing_number": "+18005550100"
+    "failover_routing_number": "+18005550100",
+    "after_hours_routing_number": "+18005550101",
+    "max_concurrent_calls_per_caller": 2,
+    "business_hours": {
+      "timezone": "America/Toronto",
+      "weekly": {
+        "mon": [
+          [
+            "08:30",
+            "18:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:30",
+            "18:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:30",
+            "18:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:30",
+            "18:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:30",
+            "18:00"
+          ]
+        ],
+        "sat": [
+          [
+            "10:00",
+            "14:00"
+          ]
+        ]
+      },
+      "closed_dates": [
+        "2026-12-25",
+        "2026-12-26"
+      ]
+    }
   },
   "localization": {
     "default_language": "en-US",
-    "supported_languages": ["en-US", "fr-CA", "es-US"],
+    "supported_languages": [
+      "en-US",
+      "fr-CA",
+      "es-US"
+    ],
     "auto_detect_language": false
   },
   "vapi_assistant": {

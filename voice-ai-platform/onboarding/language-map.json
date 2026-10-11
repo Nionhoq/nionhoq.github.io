@@ -2,7 +2,10 @@
   "$comment": "Locale → provider parameters. Deepgram/ElevenLabs language support changes often: re-verify codes against current provider docs before onboarding a new locale. es-US has no Deepgram code of its own; es-419 (Latin American Spanish) is the closest match.",
   "locales": {
     "en-US": {
-      "deepgram": { "model": "nova-3", "language": "en-US" },
+      "deepgram": {
+        "model": "nova-3",
+        "language": "en-US"
+      },
       "elevenlabs_model": "eleven_flash_v2_5",
       "cartesia_language": "en",
       "label": "English",
@@ -11,10 +14,14 @@
       "end_call_message": "Thanks for calling {name}. Goodbye.",
       "busy_message": "All of our lines are busy right now. Transferring you to a team member.",
       "handoff_description": "Switch to the English-speaking assistant when the caller speaks English or asks for English.",
-      "reply_rule": "Always reply in English."
+      "reply_rule": "Always reply in English.",
+      "after_hours_message": "Our office is closed right now. I'm connecting you to our after-hours line."
     },
     "fr-CA": {
-      "deepgram": { "model": "nova-2", "language": "fr-CA" },
+      "deepgram": {
+        "model": "nova-2",
+        "language": "fr-CA"
+      },
       "elevenlabs_model": "eleven_flash_v2_5",
       "cartesia_language": "fr",
       "label": "French (Canada)",
@@ -23,10 +30,14 @@
       "end_call_message": "Merci d'avoir appelé {name}. Au revoir.",
       "busy_message": "Toutes nos lignes sont occupées. Je vous transfère à un membre de l'équipe.",
       "handoff_description": "Passer à l'assistant francophone lorsque l'appelant parle français ou demande le français.",
-      "reply_rule": "Réponds toujours en français canadien."
+      "reply_rule": "Réponds toujours en français canadien.",
+      "after_hours_message": "Notre bureau est actuellement fermé. Je vous transfère à notre ligne après les heures d'ouverture."
     },
     "es-US": {
-      "deepgram": { "model": "nova-2", "language": "es-419" },
+      "deepgram": {
+        "model": "nova-2",
+        "language": "es-419"
+      },
       "elevenlabs_model": "eleven_flash_v2_5",
       "cartesia_language": "es",
       "label": "Spanish (US)",
@@ -35,12 +46,16 @@
       "end_call_message": "Gracias por llamar a {name}. Adiós.",
       "busy_message": "Todas nuestras líneas están ocupadas. Le transfiero con un miembro del equipo.",
       "handoff_description": "Cambiar al asistente de habla hispana cuando la persona hable español o pida español.",
-      "reply_rule": "Responde siempre en español."
+      "reply_rule": "Responde siempre en español.",
+      "after_hours_message": "Nuestra oficina está cerrada en este momento. Le transfiero a nuestra línea fuera de horario."
     }
   },
   "auto_detect": {
     "$comment": "Single assistant: Deepgram multilingual code-switching + a multilingual TTS model. Fewer moving parts than a squad, weaker on regional accents (e.g. Québécois).",
-    "deepgram": { "model": "nova-3", "language": "multi" },
+    "deepgram": {
+      "model": "nova-3",
+      "language": "multi"
+    },
     "elevenlabs_model": "eleven_flash_v2_5",
     "reply_rule": "Reply in the same language the caller is speaking ({labels}). If unsure, use {default_label}."
   }

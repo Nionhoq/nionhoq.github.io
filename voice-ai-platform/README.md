@@ -35,6 +35,26 @@ voice-ai-platform/
 
 ---
 
+## 0. Deployment profile: inbound
+
+This deployment is **inbound-only**. What that changes:
+
+| Component | Status for inbound |
+|---|---|
+| `n8n/02-outbound-dialer.json`, `voice.can_dial`, `calling_rules`, `outbound_jobs` | **Don't deploy.** TCPA/CRTC calling-hour and consent gates restrict calls *you* place. Kept for a future outbound line. |
+| `request_opt_out` tool | Low value inbound, but it still records a DNC entry if the caller asks. That protects any later callbacks. |
+| `log_callback_request` | **This is your one outbound path.** The edge records the caller's request as express `callback` consent (evidence `vapi:call/<id>`, expires in 30 days) before n8n creates the task. |
+| Business hours | **Required in practice.** Without them, after-hours busy, outage and transfer calls ring an empty office. |
+| Per-caller flood cap | On by default (2 concurrent calls per caller number), so a robocaller or redial loop can't take all of `max_concurrent_calls`. |
+
+Inbound compliance that still applies:
+- recording disclosure (two-party consent jurisdictions)
+- AI disclosure
+- PIPEDA/GDPR/HIPAA handling of what callers say
+- Quebec French-language service
+
+All of these are enforced by onboarding and the generated assistants.
+
 ## 1. The one decision that shapes everything
 
 **n8n is behind the edge, not in front of VAPI.** Every millisecond a tool call takes is
@@ -74,9 +94,11 @@ flowchart LR
 
 | Situation | What the caller experiences |
 |---|---|
-| Number at `max_concurrent_calls` | `assistant-request` returns a transfer `destination`: hears the busy message, goes to the failover line. No AI, no dead air. |
+| Number at `max_concurrent_calls` | `assistant-request` returns a transfer `destination` to the staffed line with the busy message, or outside `business_hours` to `after_hours_routing_number` with the closed message. No AI, no dead air. |
+| Same caller over `max_concurrent_calls_per_caller` | Call ended at `assistant-request`. Neither the AI nor a human line is spent on it. Withheld numbers are exempt (only the number cap applies). |
 | n8n primary slow / down | Secondary answers inside the 2.5 s budget. The caller hears the tool's filler line, then the answer. |
-| Both n8n down / hanging | At ≤ 2.5 s the tool says "transferring you to a team member", then the edge live-transfers the call via `call.monitor.controlUrl`. |
+| Both n8n down / hanging | At ≤ 2.5 s the tool says "transferring you to a team member", then the edge live-transfers the call via `call.monitor.controlUrl` to the staffed or after-hours line. |
+| Caller asks for a person | `transfer-destination-request` → staffed line in hours, after-hours line outside them (DST-aware, holiday list). |
 | Postgres down, tenant in cache | Ringing calls go straight to the failover line (tools would fail anyway). |
 | Postgres down, cache cold | Last-known-good KV copy supplies the failover number. |
 | Unknown number | 403 → VAPI ends the call. It is never routed to another tenant's assistant. |
@@ -153,9 +175,9 @@ against a local DB). That cost buys the concurrency gate and the DB-down failove
 
 | Artifact | What was run |
 |---|---|
-| `db/schema.sql` | Postgres 16, loaded as a **non-superuser** `BYPASSRLS` owner, exercised as the app role: RLS read/write isolation; HIPAA/Quebec activation gates; `can_dial` (FL 8 PM, US 9 PM / 8 AM, missing tz, unknown region, marketing without written consent, DNC); fair cross-tenant job claim; backoff; idempotent call ingest; append-only audit. **Concurrency: 20 simultaneous `acquire_call_slot` against max 3 → exactly 3 granted**, idempotent resend, release, lease expiry. |
-| `edge/worker.ts` | `tsc --strict`. `edge/test/worker.harness.mjs` runs the real worker against Postgres with mock n8n primary/secondary/events and a mock VAPI `controlUrl`: **16/16 pass**. Covers secret check, concurrency gate and failover destination, slot release, slow primary → secondary in 1.64 s, both hanging → answer at 2.52 s, live transfer POST, idempotent tool replay, PHI gating, opt-out → DNC row, DB-down failover from cache and from last-known-good, unknown number → 403. |
-| `onboarding/` | **12/12 tests**: schema and cross-field rules, squad / multilingual / HIPAA builds; `--apply` against real Postgres + mock VAPI/Cloudflare (creates 3 assistants + squad, binds the number, activates); second run issues only PATCHes; a second client claiming the same number is refused with **zero** VAPI calls; a missing VAPI import is reported. |
+| `db/schema.sql` | Postgres 16, loaded as a **non-superuser** `BYPASSRLS` owner, exercised as the app role: RLS read/write isolation; HIPAA/Quebec activation gates; `can_dial` (FL 8 PM, US 9 PM / 8 AM, missing tz, unknown region, marketing without written consent, DNC); fair cross-tenant job claim; backoff; idempotent call ingest; append-only audit. **Concurrency: 20 simultaneous `acquire_call_slot` against max 3 → exactly 3 granted**; **flood: 15 simultaneous calls from one number + 3 real callers → 2 + 3 admitted, 13 blocked**; idempotent resend, release, lease expiry. |
+| `edge/worker.ts` | `tsc --strict`. `edge/test/worker.harness.mjs` runs the real worker against Postgres with mock n8n primary/secondary/events and a mock VAPI `controlUrl`: **27/27 pass** (incl. business hours across the Nov 2026 DST change, holidays, after-hours routing for busy/transfer/outage, per-caller flood cap, callback consent). Covers secret check, concurrency gate and failover destination, slot release, slow primary → secondary in 1.64 s, both hanging → answer at 2.52 s, live transfer POST, idempotent tool replay, PHI gating, opt-out → DNC row, DB-down failover from cache and from last-known-good, unknown number → 403. |
+| `onboarding/` | **14/14 tests** (incl. business-hours validation): schema and cross-field rules, squad / multilingual / HIPAA builds; `--apply` against real Postgres + mock VAPI/Cloudflare (creates 3 assistants + squad, binds the number, activates); second run issues only PATCHes; a second client claiming the same number is refused with **zero** VAPI calls; a missing VAPI import is reported. |
 | Edge ↔ n8n HMAC | Worker's WebCrypto signer vs n8n Code-node verifier; tamper and stale rejected. |
 | `n8n/*.json` | Valid JSON, all connections resolve, every Code node and expression parses. |
 | `api/openapi.yaml` | swagger-parser validation. |

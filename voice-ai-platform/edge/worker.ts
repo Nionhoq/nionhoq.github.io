@@ -40,10 +40,20 @@ type Tenant = {
   timezone: string;
   language: string;
   busyMessage: string;
+  afterHoursMessage: string;
+  afterHoursNumber: string | null;
+  businessHours: BusinessHours | null;
+  maxPerCaller: number;
   recordingEnabled: boolean;
   transferNumber: string;
   assistantId: string | null;
   squadId: string | null;
+};
+
+type BusinessHours = {
+  timezone: string;
+  weekly: Partial<Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", [string, string][]>>;
+  closed_dates?: string[];
 };
 
 type ToolCall = { id: string; type: "function"; function: { name: string; arguments: Record<string, unknown> | string } };
@@ -108,14 +118,22 @@ export default {
       switch (msg.type) {
         case "assistant-request": {
           const phoneId = msg.call?.phoneNumberId ?? msg.phoneNumber?.id;
-          let slot: { granted: boolean; active: number; max_allowed: number } | undefined;
+          const caller: string | null = msg.call?.customer?.number ?? null;
+          let slot: { granted: boolean; active: number; max_allowed: number; reason: string } | undefined;
           try {
-            [slot] = await sql<{ granted: boolean; active: number; max_allowed: number }[]>`
-              SELECT * FROM voice.acquire_call_slot(${phoneId}, ${msg.call?.id}, ${SLOT_LEASE_SECONDS})`;
+            [slot] = await sql<{ granted: boolean; active: number; max_allowed: number; reason: string }[]>`
+              SELECT * FROM voice.acquire_call_slot(${phoneId}, ${msg.call?.id}, ${SLOT_LEASE_SECONDS},
+                                                    ${caller}, ${tenant.maxPerCaller})`;
           } catch {
             // Tenant came from cache but the DB is down: tools won't work either, so go to humans.
             log(requestId, msg.type, "slot_gate_db_error_failover", t0);
             return json(failoverDestination(tenant));
+          }
+          if (slot?.reason === "caller_limit") {
+            // Same number already holds its share of lines: robocaller / redial loop. Don't burn a
+            // human's time on it either; ending the call is the cheapest safe answer.
+            log(requestId, msg.type, `caller_limit ${slot.active}/${slot.max_allowed}`, t0);
+            return json({ error: "too many concurrent calls from this number" });
           }
           if (!slot?.granted) {
             log(requestId, msg.type, `at_capacity ${slot?.active}/${slot?.max_allowed}`, t0);
@@ -134,14 +152,16 @@ export default {
           return json({ results });
         }
 
-        case "transfer-destination-request":
+        case "transfer-destination-request": {
+          const line = humanLine(tenant);
           return json({
             destination: {
               type: "number",
-              number: tenant.transferNumber,
-              message: "Connecting you with a team member now.",
+              number: line.number,
+              message: line.afterHours ? tenant.afterHoursMessage : "Connecting you with a team member now.",
             },
           });
+        }
 
         case "end-of-call-report":
         case "status-update":
@@ -193,6 +213,10 @@ async function resolveTenant(msg: any, env: Env, sql: postgres.Sql): Promise<Ten
     timezone: profile.timezone ?? "America/New_York",
     language: profile.language ?? "en-US",
     busyMessage: profile.busyMessage ?? "All of our lines are busy. Transferring you to a team member.",
+    afterHoursMessage: profile.afterHoursMessage ?? "Our office is closed right now. Connecting you to our after-hours line.",
+    afterHoursNumber: profile.afterHoursNumber ?? null,
+    businessHours: profile.businessHours ?? null,
+    maxPerCaller: profile.maxPerCaller ?? 2,
     recordingEnabled: (profile.recordingEnabled ?? false) && !rows[0].hipaa,
     transferNumber: rows[0].failover_number ?? profile.transferNumber ?? "",
   };
@@ -210,7 +234,32 @@ async function lastKnownGood(msg: any, env: Env): Promise<Tenant | null> {
 
 /** assistant-request answer that skips the AI and transfers straight to the human line. */
 function failoverDestination(t: Tenant) {
-  return { destination: { type: "number", number: t.transferNumber, message: t.busyMessage } };
+  const line = humanLine(t);
+  return { destination: { type: "number", number: line.number, message: line.afterHours ? t.afterHoursMessage : t.busyMessage } };
+}
+
+/** Staffed line during business hours, after-hours line otherwise. No hours configured = 24/7 staffed. */
+export function humanLine(t: Tenant, now = new Date()): { number: string; afterHours: boolean } {
+  if (!t.businessHours || !t.afterHoursNumber) return { number: t.transferNumber, afterHours: false };
+  return isOpen(t.businessHours, now) ? { number: t.transferNumber, afterHours: false } : { number: t.afterHoursNumber, afterHours: true };
+}
+
+export function isOpen(bh: BusinessHours, now: Date): boolean {
+  let parts: Record<string, string>;
+  try {
+    parts = Object.fromEntries(
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: bh.timezone, weekday: "short", year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+      }).formatToParts(now).map((p) => [p.type, p.value]),
+    );
+  } catch {
+    return true; // bad timezone: assume staffed rather than strand callers on an after-hours line
+  }
+  if (bh.closed_dates?.includes(`${parts.year}-${parts.month}-${parts.day}`)) return false;
+  const day = parts.weekday.toLowerCase().slice(0, 3) as keyof BusinessHours["weekly"];
+  const hhmm = `${parts.hour}:${parts.minute}`;
+  return (bh.weekly[day] ?? []).some(([start, end]) => hhmm >= start && hhmm < end);
 }
 
 async function releaseSlot(sql: postgres.Sql, callId: string | undefined): Promise<void> {
@@ -258,6 +307,10 @@ async function runTool(tc: ToolCall, msg: any, tenant: Tenant, env: Env, sql: po
     } else if (name === "verify_identity" && state.verify_attempts >= 3) {
       result = { toolCallId: tc.id, result: "I wasn't able to verify you. Let me connect you with a team member." };
     } else if (N8N_TOOLS.has(name)) {
+      if (name === "log_callback_request" && caller) {
+        // The caller asking to be called back IS the consent for that callback (inbound → outbound).
+        await tx`SELECT voice.record_callback_consent(${tenant.id}, ${caller}, ${callId})`;
+      }
       const deadline = Date.now() + BACKEND_BUDGET_MS;
       const out = await callN8nTool(env, requestId, deadline, { tenantId: tenant.id, callId, caller, tool: name, args, toolCallId: tc.id });
       if (out === null) {
@@ -335,7 +388,8 @@ async function callN8nTool(env: Env, requestId: string, deadline: number, payloa
  */
 async function liveTransfer(msg: any, tenant: Tenant, requestId: string): Promise<void> {
   const controlUrl: string | undefined = msg.call?.monitor?.controlUrl;
-  if (!controlUrl || !tenant.transferNumber) {
+  const line = humanLine(tenant);
+  if (!controlUrl || !line.number) {
     log(requestId, "live_transfer_unavailable", controlUrl ? "no_number" : "no_control_url", Date.now());
     return;
   }
@@ -343,7 +397,7 @@ async function liveTransfer(msg: any, tenant: Tenant, requestId: string): Promis
   await fetch(controlUrl, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ type: "transfer", destination: { type: "number", number: tenant.transferNumber } }),
+    body: JSON.stringify({ type: "transfer", destination: { type: "number", number: line.number } }),
     signal: AbortSignal.timeout(5_000),
   }).catch(() => log(requestId, "live_transfer_failed", "", Date.now()));
 }

@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import crypto from "node:crypto";
 import assert from "node:assert/strict";
 import postgres from "postgres";
-import worker from "../worker.ts";
+import worker, { isOpen } from "../worker.ts";
 
 // Runs the real edge/worker.ts under Node (--experimental-strip-types) against a live Postgres
 // loaded with db/schema.sql, plus mock n8n primary/secondary, n8n events, and VAPI controlUrl.
@@ -52,7 +52,9 @@ async function call(message, { secret = "vapi-secret", path = "/webhook/vapi-too
   await Promise.allSettled(pending);
   return { status: res.status, body: await res.json().catch(() => null) };
 }
-const vcall = (id0, extra = {}) => { const id = `${id0}_${RUN}`; return { id, type: "inboundPhoneCall", phoneNumberId: PH, customer: { number: "+13055550123" }, monitor: { controlUrl: u(control, `/control/${id}`) }, ...extra }; };
+// Distinct caller per call id unless overridden, so the per-caller flood cap only fires where tested.
+const callerFor = (id0) => "+1305" + String(5550000 + [...id0].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9999, 7));
+const vcall = (id0, extra = {}) => { const id = `${id0}_${RUN}`; return { id, type: "inboundPhoneCall", phoneNumberId: PH, customer: { number: callerFor(id0) }, monitor: { controlUrl: u(control, `/control/${id}`) }, ...extra }; };
 const tool = (id, name, args = {}) => ({ id: `${id}_${RUN}`, type: "function", function: { name, arguments: args } });
 const R = (name, ok) => console.log(`${ok ? "PASS" : "FAIL"}  ${name}`);
 let fails = 0; const check = (name, fn) => { try { fn(); R(name, true); } catch (e) { fails++; R(name, false); console.log("      ", e.message.split("\n").slice(0, 6).join(" | ")); } };
@@ -119,6 +121,74 @@ check("request_opt_out confirms", () => assert.match(r.body.results[0].result, /
 
 r = await call({ type: "end-of-call-report", call: vcall("c2") }, { path: "/vapi/events" });
 check("end-of-call-report on alias path releases + acks", () => assert.deepEqual(r.body, { ok: true }));
+
+// ---- inbound-specific: business hours, per-caller cap, callback consent -------------------
+const TOR = { timezone: "America/Toronto", weekly: { mon: [["08:30", "18:00"]], sat: [["10:00", "14:00"]] }, closed_dates: ["2026-12-25"] };
+check("isOpen: Mon 09:00 Toronto open, 18:00 closed (end exclusive)", () => {
+  assert.equal(isOpen(TOR, new Date("2026-10-12T13:00:00Z")), true);
+  assert.equal(isOpen(TOR, new Date("2026-10-12T22:00:00Z")), false);
+});
+check("isOpen: DST — Mon 2 Nov 2026 08:45 EST open, 08:15 closed", () => {
+  assert.equal(isOpen(TOR, new Date("2026-11-02T13:45:00Z")), true);
+  assert.equal(isOpen(TOR, new Date("2026-11-02T13:15:00Z")), false);
+});
+check("isOpen: holiday and unlisted day closed; bad tz fails open", () => {
+  assert.equal(isOpen({ ...TOR, weekly: { fri: [["00:00", "24:00"]] } }, new Date("2026-12-25T15:00:00Z")), false);
+  assert.equal(isOpen(TOR, new Date("2026-10-13T15:00:00Z")), false);
+  assert.equal(isOpen({ ...TOR, timezone: "Mars/Olympus" }, new Date()), true);
+});
+
+// Start from empty lines, fill both (max_concurrent_calls=2), then probe routing in and out of hours.
+const prof = (bh, maxPerCaller = 2) => kv.set(`tenant:profile:${TENANT}`, JSON.stringify({ name: "Edge Test", busyMessage: "busy-msg",
+  afterHoursMessage: "closed-msg", afterHoursNumber: "+18005550101", businessHours: bh, maxPerCaller }));
+for (const id of ["c2", "c4"]) await call({ type: "end-of-call-report", call: vcall(id) });
+const fa = await call({ type: "assistant-request", call: vcall("fill_a") });
+const fb = await call({ type: "assistant-request", call: vcall("fill_b") });
+check("fixture: both lines filled", () => { assert.deepEqual(fa.body, { squadId: "squad_edge" }); assert.deepEqual(fb.body, { squadId: "squad_edge" }); });
+const clearCache = () => { for (const k of [...kv.keys()]) if (k.startsWith("tenant:phone:")) kv.delete(k); };
+const ALWAYS = { timezone: "UTC", weekly: Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => [d, [["00:00", "24:00"]]])) };
+const NEVER = { timezone: "UTC", weekly: {} };
+prof(ALWAYS); clearCache();
+r = await call({ type: "assistant-request", call: vcall("full_in_hours") });
+check("at capacity during hours → daytime line + busy message", () => assert.deepEqual(r.body.destination, { type: "number", number: "+18005550100", message: "busy-msg" }));
+prof(NEVER); clearCache();
+r = await call({ type: "assistant-request", call: vcall("full_after_hours") });
+check("at capacity after hours → after-hours line + closed message", () => assert.deepEqual(r.body.destination, { type: "number", number: "+18005550101", message: "closed-msg" }));
+r = await call({ type: "transfer-destination-request", call: vcall("fill_a") });
+check("transfer_to_human after hours → after-hours line", () => assert.equal(r.body.destination.number, "+18005550101"));
+primaryDelay = 5000; secondaryUp = false;
+r = await call({ type: "tool-calls", call: vcall("fill_b"), toolCallList: [tool("t7", "log_callback_request", { topic: "x" })] });
+check("backend outage after hours → live transfer to after-hours line", () => assert.equal(hits.control.at(-1).destination.number, "+18005550101"));
+primaryDelay = 0; secondaryUp = true;
+
+// Flood guard: per-caller cap (1) below number capacity (2), lines empty.
+for (const id of ["fill_a", "fill_b"]) await call({ type: "end-of-call-report", call: vcall(id) });
+prof(ALWAYS, 1); clearCache();
+const flood = (n) => call({ type: "assistant-request", call: vcall(`flood${n}`, { customer: { number: "+15550001111" } }) });
+const f1 = await flood(1), f2 = await flood(2);
+const other = await call({ type: "assistant-request", call: vcall("real_caller") });
+check("same caller over its cap → rejected (call ends, no human line used)", () => {
+  assert.deepEqual(f1.body, { squadId: "squad_edge" });
+  assert.equal(f2.body.destination, undefined);
+  assert.match(f2.body.error ?? "", /too many concurrent calls/);
+});
+check("a different caller still gets the remaining line", () => assert.deepEqual(other.body, { squadId: "squad_edge" }));
+for (const id of ["flood1", "real_caller"]) await call({ type: "end-of-call-report", call: vcall(id) });
+prof(ALWAYS); clearCache();
+
+await call({ type: "assistant-request", call: vcall("cb") });
+r = await call({ type: "tool-calls", call: vcall("cb"), toolCallList: [tool("t8", "log_callback_request", { topic: "billing" })] });
+{
+  const sql = postgres(DB_URL, { max: 1 });
+  const rows = await sql.begin(async (tx) => {
+    await tx`SELECT voice.set_tenant(${TENANT})`;
+    return tx`SELECT k.purpose, k.consent_type, k.evidence_uri FROM voice.consents k JOIN voice.contacts c ON c.id = k.contact_id WHERE c.e164 = ${callerFor("cb")}`;
+  });
+  await sql.end();
+  check("log_callback_request records express callback consent with the call as evidence", () =>
+    assert.deepEqual([...rows], [{ purpose: "callback", consent_type: "express", evidence_uri: `vapi:call/cb_${RUN}` }]));
+}
+await call({ type: "end-of-call-report", call: vcall("cb") });
 
 r = await call({ type: "assistant-request", call: vcall("c9") }, { e: env(1) });
 check("DB down → last-known-good failover destination", () => assert.deepEqual(r.body?.destination?.number, "+18005550100"));

@@ -5,16 +5,34 @@
   "description": "One file per client. Validated by provision.mjs before anything is created. Cross-field rules that JSON Schema can't express (default language must be supported, Quebec needs French, failover can't be one of the client's own numbers) are enforced in provision.mjs.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["client_id", "client_name", "telephony", "localization", "vapi_assistant", "compliance"],
+  "required": [
+    "client_id",
+    "client_name",
+    "telephony",
+    "localization",
+    "vapi_assistant",
+    "compliance"
+  ],
   "properties": {
-    "$schema": { "type": "string" },
-    "client_id": { "type": "string", "pattern": "^[a-z0-9_]{3,64}$" },
-    "client_name": { "type": "string", "minLength": 1, "maxLength": 80 },
-
+    "$schema": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]{3,64}$"
+    },
+    "client_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
     "telephony": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["phone_numbers", "failover_routing_number"],
+      "required": [
+        "phone_numbers",
+        "failover_routing_number"
+      ],
       "properties": {
         "phone_numbers": {
           "type": "array",
@@ -22,29 +40,128 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["number", "provider", "max_concurrent_calls"],
+            "required": [
+              "number",
+              "provider",
+              "max_concurrent_calls"
+            ],
             "properties": {
-              "number": { "$ref": "#/$defs/e164" },
-              "provider": { "enum": ["twilio", "vonage", "telnyx", "vapi", "sip"] },
-              "line_type": { "type": "string", "examples": ["inbound_support", "outbound_reminders"] },
-              "max_concurrent_calls": { "type": "integer", "minimum": 1, "maximum": 1000 }
+              "number": {
+                "$ref": "#/$defs/e164"
+              },
+              "provider": {
+                "enum": [
+                  "twilio",
+                  "vonage",
+                  "telnyx",
+                  "vapi",
+                  "sip"
+                ]
+              },
+              "line_type": {
+                "type": "string",
+                "examples": [
+                  "inbound_support",
+                  "outbound_reminders"
+                ]
+              },
+              "max_concurrent_calls": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              }
             }
           }
         },
         "failover_routing_number": {
           "$ref": "#/$defs/e164",
           "description": "Staffed human line. Used when the per-number concurrency limit is hit or the backend is down."
+        },
+        "business_hours": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "timezone",
+            "weekly"
+          ],
+          "description": "When the failover line is staffed. Outside these hours, every human hand-off goes to after_hours_routing_number instead.",
+          "properties": {
+            "timezone": {
+              "type": "string",
+              "description": "IANA, e.g. America/Toronto"
+            },
+            "weekly": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "$ref": "#/$defs/hhmm"
+                    },
+                    {
+                      "$ref": "#/$defs/hhmm"
+                    }
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "propertyNames": {
+                "enum": [
+                  "mon",
+                  "tue",
+                  "wed",
+                  "thu",
+                  "fri",
+                  "sat",
+                  "sun"
+                ]
+              }
+            },
+            "closed_dates": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "date"
+              },
+              "description": "Holidays (local dates)."
+            }
+          }
+        },
+        "after_hours_routing_number": {
+          "$ref": "#/$defs/e164",
+          "description": "Answering service / voicemail line used outside business_hours."
+        },
+        "max_concurrent_calls_per_caller": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 2,
+          "description": "Flood guard: concurrent calls allowed from one caller number."
         }
       }
     },
-
     "localization": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["default_language", "supported_languages"],
+      "required": [
+        "default_language",
+        "supported_languages"
+      ],
       "properties": {
-        "default_language": { "$ref": "#/$defs/locale" },
-        "supported_languages": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/locale" } },
+        "default_language": {
+          "$ref": "#/$defs/locale"
+        },
+        "supported_languages": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/locale"
+          }
+        },
         "auto_detect_language": {
           "type": "boolean",
           "default": false,
@@ -52,36 +169,78 @@
         }
       }
     },
-
     "vapi_assistant": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["model", "voice"],
+      "required": [
+        "model",
+        "voice"
+      ],
       "properties": {
-        "model": { "type": "string", "examples": ["gpt-4.1-mini", "gpt-4o-mini", "claude-sonnet-4-5", "llama-3.3-70b-versatile"] },
-        "model_provider": { "enum": ["openai", "anthropic", "groq", "azure-openai"], "description": "Inferred from model name when omitted." },
+        "model": {
+          "type": "string",
+          "examples": [
+            "gpt-4.1-mini",
+            "gpt-4o-mini",
+            "claude-sonnet-4-5",
+            "llama-3.3-70b-versatile"
+          ]
+        },
+        "model_provider": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "groq",
+            "azure-openai"
+          ],
+          "description": "Inferred from model name when omitted."
+        },
         "transcriber": {
           "type": "object",
           "additionalProperties": false,
           "description": "Optional override. Normally derived per language from language-map.json.",
           "properties": {
-            "provider": { "enum": ["deepgram"] },
-            "model": { "type": "string" },
-            "language": { "type": "string" }
+            "provider": {
+              "enum": [
+                "deepgram"
+              ]
+            },
+            "model": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            }
           }
         },
         "voice": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["provider", "voice_id"],
+          "required": [
+            "provider",
+            "voice_id"
+          ],
           "properties": {
-            "provider": { "enum": ["elevenlabs", "cartesia"] },
-            "voice_id": { "type": "string", "minLength": 1 },
+            "provider": {
+              "enum": [
+                "elevenlabs",
+                "cartesia"
+              ]
+            },
+            "voice_id": {
+              "type": "string",
+              "minLength": 1
+            },
             "voices_by_language": {
               "type": "object",
               "description": "Native-speaker voice per locale. Falls back to voice_id (multilingual model).",
-              "propertyNames": { "$ref": "#/$defs/locale" },
-              "additionalProperties": { "type": "string", "minLength": 1 }
+              "propertyNames": {
+                "$ref": "#/$defs/locale"
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         },
@@ -92,50 +251,124 @@
         }
       }
     },
-
     "compliance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["jurisdiction", "hipaa_mode", "recording_enabled", "data_retention_days"],
+      "required": [
+        "jurisdiction",
+        "hipaa_mode",
+        "recording_enabled",
+        "data_retention_days"
+      ],
       "properties": {
         "jurisdiction": {
           "type": "string",
           "pattern": "^(US|CA|EU|UK)([-_][A-Z]{2})?$",
-          "examples": ["US", "US-FL", "CA-ON", "CA_QC", "EU-DE"]
+          "examples": [
+            "US",
+            "US-FL",
+            "CA-ON",
+            "CA_QC",
+            "EU-DE"
+          ]
         },
-        "pipeda_consent_required": { "type": "boolean" },
-        "hipaa_mode": { "type": "boolean" },
-        "baa_verified_at": { "type": "string", "format": "date-time" },
-        "pia_completed_at": { "type": "string", "format": "date-time", "description": "Quebec Law 25 PIA / GDPR DPIA evidence date." },
-        "recording_enabled": { "type": "boolean" },
-        "data_retention_days": { "type": "integer", "minimum": 1, "maximum": 3650 },
-        "outbound_enabled": { "type": "boolean", "default": false }
+        "pipeda_consent_required": {
+          "type": "boolean"
+        },
+        "hipaa_mode": {
+          "type": "boolean"
+        },
+        "baa_verified_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "pia_completed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Quebec Law 25 PIA / GDPR DPIA evidence date."
+        },
+        "recording_enabled": {
+          "type": "boolean"
+        },
+        "data_retention_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3650
+        },
+        "outbound_enabled": {
+          "type": "boolean",
+          "default": false
+        }
       },
       "allOf": [
         {
-          "if": { "properties": { "hipaa_mode": { "const": true } } },
-          "then": {
-            "required": ["baa_verified_at"],
+          "if": {
             "properties": {
-              "recording_enabled": { "const": false },
-              "data_retention_days": { "maximum": 30 }
+              "hipaa_mode": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "baa_verified_at"
+            ],
+            "properties": {
+              "recording_enabled": {
+                "const": false
+              },
+              "data_retention_days": {
+                "maximum": 30
+              }
             }
           }
         },
         {
-          "if": { "properties": { "jurisdiction": { "pattern": "^CA[-_]QC$" } } },
-          "then": { "required": ["pia_completed_at"] }
+          "if": {
+            "properties": {
+              "jurisdiction": {
+                "pattern": "^CA[-_]QC$"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "pia_completed_at"
+            ]
+          }
         },
         {
-          "if": { "properties": { "jurisdiction": { "pattern": "^EU" } } },
-          "then": { "required": ["pia_completed_at"] }
+          "if": {
+            "properties": {
+              "jurisdiction": {
+                "pattern": "^EU"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "pia_completed_at"
+            ]
+          }
         }
       ]
     }
   },
-
   "$defs": {
-    "e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{6,14}$" },
-    "locale": { "enum": ["en-US", "fr-CA", "es-US"] }
+    "e164": {
+      "type": "string",
+      "pattern": "^\\+[1-9][0-9]{6,14}$"
+    },
+    "locale": {
+      "enum": [
+        "en-US",
+        "fr-CA",
+        "es-US"
+      ]
+    },
+    "hhmm": {
+      "type": "string",
+      "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$|^24:00$"
+    }
   }
 }

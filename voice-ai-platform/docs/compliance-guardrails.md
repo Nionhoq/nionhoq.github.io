@@ -52,6 +52,13 @@ Enforcement points: **EDGE** = `edge/worker.ts` · **DB** = `db/schema.sql` · *
 
 ## 1. TCPA (US) + state mini-TCPAs
 
+> **Inbound-only deployments:** TCPA/CRTC rules on consent, calling hours and DNC govern
+> calls *you* place. For inbound they apply only to **callbacks**. The edge records a
+> caller's callback request as express consent (`purpose='callback'`, 30-day expiry, call
+> id as evidence). A callback to a number on the internal DNC list still needs human
+> review, because the DNC entry is deliberately not auto-removed. The calling-hours rows
+> below apply to callbacks too.
+
 | Obligation | Control | Where |
 |---|---|---|
 | Prior express (written for marketing) consent before AI-voice calls to wireless | `consents` row with `channel='voice_ai'`, `consent_type`, `evidence_uri` required; dialer hard-fails without it | DB, DIAL |

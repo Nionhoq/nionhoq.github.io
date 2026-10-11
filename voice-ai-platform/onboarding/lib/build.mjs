@@ -33,6 +33,16 @@ export function validate(cfg, { apply = false } = {}) {
   if (jur === "CA-QC" && !loc.supported_languages.includes("fr-CA")) errors.push("/localization CA-QC (Charter of the French Language) requires fr-CA support");
   const own = new Set(tel.phone_numbers.map((p) => p.number));
   if (own.has(tel.failover_routing_number)) errors.push("/telephony failover_routing_number must not be one of the client's own AI-handled numbers (it would loop)");
+  if (tel.after_hours_routing_number && own.has(tel.after_hours_routing_number)) errors.push("/telephony after_hours_routing_number must not be one of the client's own AI-handled numbers (it would loop)");
+  if (tel.business_hours) {
+    if (!validTimeZone(tel.business_hours.timezone)) errors.push(`/telephony/business_hours timezone "${tel.business_hours.timezone}" is not a valid IANA zone`);
+    for (const [day, ranges] of Object.entries(tel.business_hours.weekly)) {
+      for (const [a, b] of ranges) if (a >= b) errors.push(`/telephony/business_hours ${day} ${a}-${b}: start must be before end`);
+    }
+    if (!tel.after_hours_routing_number) warnings.push("business_hours set without after_hours_routing_number: after-hours hand-offs will ring the daytime line");
+  } else {
+    warnings.push("no business_hours: the failover line is assumed staffed 24/7 (busy, outage and transfer calls all go there)");
+  }
   if (own.size !== tel.phone_numbers.length) errors.push("/telephony duplicate phone number");
 
   for (const [lang, id] of Object.entries(va.voice.voices_by_language ?? {})) {
@@ -50,6 +60,10 @@ export function validate(cfg, { apply = false } = {}) {
     warnings.push("HIPAA mode with OpenAI: requires an executed BAA with OpenAI (or use azure-openai under Microsoft's BAA)");
   }
   return { errors, warnings };
+}
+
+function validTimeZone(tz) {
+  try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; }
 }
 
 export function normJurisdiction(j) {
@@ -154,11 +168,16 @@ export function phoneBinding(env) {
 
 export function kvProfile(cfg) {
   const def = cfg.localization.default_language;
+  const tel = cfg.telephony;
   return {
     name: cfg.client_name,
     language: def,
-    transferNumber: cfg.telephony.failover_routing_number,
+    transferNumber: tel.failover_routing_number,
+    afterHoursNumber: tel.after_hours_routing_number ?? null,
+    businessHours: tel.business_hours ?? null,
+    maxPerCaller: tel.max_concurrent_calls_per_caller ?? 2,
     busyMessage: LANG.locales[def].busy_message,
+    afterHoursMessage: LANG.locales[def].after_hours_message,
     recordingEnabled: cfg.compliance.recording_enabled && !cfg.compliance.hipaa_mode,
   };
 }

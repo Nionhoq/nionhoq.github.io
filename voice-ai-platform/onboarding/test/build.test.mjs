@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { validate, buildAssistants, buildSquad, phoneBinding } from "../lib/build.mjs";
+import { validate, buildAssistants, buildSquad, phoneBinding, kvProfile } from "../lib/build.mjs";
 
 const base = () => JSON.parse(readFileSync(new URL("../examples/acme.client_config.json", import.meta.url)));
 const env = { edgeBaseUrl: "https://edge.test", webhookSecret: "s3cr3t" };
@@ -85,4 +85,21 @@ test("HIPAA build disables recording and summaries; no-recording disclosure", ()
 
 test("phone binding clears static assistant so assistant-request reaches the edge", () => {
   assert.deepEqual(phoneBinding(env), { assistantId: null, squadId: null, server: { url: "https://edge.test/webhook/vapi-tool-call", timeoutSeconds: 3, secret: "s3cr3t" } });
+});
+
+test("business hours: bad tz, inverted range, after-hours loop rejected; missing after-hours line warned", () => {
+  assert.ok(validate(mut((c) => { c.telephony.business_hours.timezone = "Mars/Olympus"; })).errors.some((e) => /IANA/.test(e)));
+  assert.ok(validate(mut((c) => { c.telephony.business_hours.weekly.mon = [["18:00", "08:30"]]; })).errors.some((e) => /start must be before end/.test(e)));
+  assert.ok(validate(mut((c) => { c.telephony.after_hours_routing_number = "+18005550199"; })).errors.some((e) => /loop/.test(e)));
+  assert.ok(validate(mut((c) => { delete c.telephony.after_hours_routing_number; })).warnings.some((w) => /daytime line/.test(w)));
+  assert.ok(validate(mut((c) => { delete c.telephony.business_hours; })).warnings.some((w) => /24\/7/.test(w)));
+  assert.ok(validate(mut((c) => { c.telephony.business_hours.weekly.mon = [["8:30", "18:00"]]; })).errors.length > 0);
+});
+
+test("kv profile carries routing data for the edge", () => {
+  const p = kvProfile(base());
+  assert.equal(p.afterHoursNumber, "+18005550101");
+  assert.equal(p.businessHours.timezone, "America/Toronto");
+  assert.equal(p.maxPerCaller, 2);
+  assert.match(p.afterHoursMessage, /closed/);
 });

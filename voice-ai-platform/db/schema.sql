@@ -143,10 +143,12 @@ CREATE TABLE active_calls (
   vapi_call_id     text PRIMARY KEY,
   tenant_id        uuid NOT NULL REFERENCES tenants(id),
   phone_number_id  uuid NOT NULL REFERENCES phone_numbers(id),
+  caller_e164      text,                          -- NULL for withheld / anonymous callers
   acquired_at      timestamptz NOT NULL DEFAULT now(),
   lease_expires_at timestamptz NOT NULL
 );
 CREATE INDEX ON active_calls (phone_number_id, lease_expires_at);
+CREATE INDEX ON active_calls (phone_number_id, caller_e164);
 
 CREATE TABLE idempotency_keys (
   key        text PRIMARY KEY,
@@ -416,31 +418,66 @@ $$ SELECT tenant_id FROM phone_numbers WHERE e164 = p_e164 $$;
 
 -- Per-number concurrency gate. The advisory lock serialises acquirers for one number, so
 -- N simultaneous inbound calls can never all see "max-1 active" and all get in.
--- Idempotent per call id (VAPI may resend assistant-request).
-CREATE OR REPLACE FUNCTION acquire_call_slot(p_vapi_phone_id text, p_vapi_call_id text, p_lease_seconds int DEFAULT 1020)
-RETURNS TABLE (granted boolean, active int, max_allowed int)
+-- Also caps concurrent calls from ONE caller number, so a robocaller or a redial loop
+-- can't take every slot from real customers. Idempotent per call id (VAPI may resend).
+CREATE OR REPLACE FUNCTION acquire_call_slot(p_vapi_phone_id text, p_vapi_call_id text,
+                                             p_lease_seconds int DEFAULT 1020,
+                                             p_caller text DEFAULT NULL, p_max_per_caller int DEFAULT 2)
+RETURNS TABLE (granted boolean, active int, max_allowed int, reason text)
 LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE pn phone_numbers%ROWTYPE; n int;
+DECLARE pn phone_numbers%ROWTYPE; n int; from_caller int;
 BEGIN
   SELECT * INTO pn FROM phone_numbers WHERE vapi_phone_id = p_vapi_phone_id;
-  IF NOT FOUND THEN RETURN QUERY SELECT false, 0, 0; RETURN; END IF;
+  IF NOT FOUND THEN RETURN QUERY SELECT false, 0, 0, 'unknown_number'; RETURN; END IF;
   PERFORM set_tenant(pn.tenant_id);
   PERFORM pg_advisory_xact_lock(hashtextextended(pn.id::text, 0));
 
   IF EXISTS (SELECT 1 FROM active_calls WHERE vapi_call_id = p_vapi_call_id) THEN
     SELECT count(*) INTO n FROM active_calls WHERE phone_number_id = pn.id;
-    RETURN QUERY SELECT true, n, pn.max_concurrent_calls; RETURN;
+    RETURN QUERY SELECT true, n, pn.max_concurrent_calls, 'ok'; RETURN;
   END IF;
 
   DELETE FROM active_calls WHERE phone_number_id = pn.id AND lease_expires_at < now();
-  SELECT count(*) INTO n FROM active_calls WHERE phone_number_id = pn.id;
-  IF n >= pn.max_concurrent_calls THEN
-    RETURN QUERY SELECT false, n, pn.max_concurrent_calls; RETURN;
+
+  IF p_caller IS NOT NULL THEN
+    SELECT count(*) INTO from_caller FROM active_calls WHERE phone_number_id = pn.id AND caller_e164 = p_caller;
+    IF from_caller >= p_max_per_caller THEN
+      RETURN QUERY SELECT false, from_caller, p_max_per_caller, 'caller_limit'; RETURN;
+    END IF;
   END IF;
 
-  INSERT INTO active_calls (vapi_call_id, tenant_id, phone_number_id, lease_expires_at)
-  VALUES (p_vapi_call_id, pn.tenant_id, pn.id, now() + make_interval(secs => p_lease_seconds));
-  RETURN QUERY SELECT true, n + 1, pn.max_concurrent_calls;
+  SELECT count(*) INTO n FROM active_calls WHERE phone_number_id = pn.id;
+  IF n >= pn.max_concurrent_calls THEN
+    RETURN QUERY SELECT false, n, pn.max_concurrent_calls, 'at_capacity'; RETURN;
+  END IF;
+
+  INSERT INTO active_calls (vapi_call_id, tenant_id, phone_number_id, caller_e164, lease_expires_at)
+  VALUES (p_vapi_call_id, pn.tenant_id, pn.id, p_caller, now() + make_interval(secs => p_lease_seconds));
+  RETURN QUERY SELECT true, n + 1, pn.max_concurrent_calls, 'ok';
+END $$;
+
+-- Inbound callback request = the caller's express consent to be called back at that number
+-- for that purpose. Evidence is the call itself. Re-grants a previously revoked consent
+-- (an explicit new request supersedes an earlier opt-out for this purpose only; the DNC
+-- entry is NOT removed here, so callbacks still go through a human review of DNC hits).
+CREATE OR REPLACE FUNCTION record_callback_consent(p_tenant uuid, p_caller text, p_vapi_call_id text)
+RETURNS uuid LANGUAGE plpgsql AS $$
+DECLARE cid uuid; kid uuid;
+BEGIN
+  PERFORM set_tenant(p_tenant);
+  INSERT INTO contacts (tenant_id, e164) VALUES (p_tenant, p_caller)
+  ON CONFLICT (tenant_id, e164) DO UPDATE SET e164 = EXCLUDED.e164
+  RETURNING id INTO cid;
+  INSERT INTO consents (tenant_id, contact_id, channel, purpose, consent_type, lawful_basis, evidence_uri, granted_at)
+  VALUES (p_tenant, cid, 'voice_ai', 'callback', 'express', 'consent', 'vapi:call/' || p_vapi_call_id, now())
+  ON CONFLICT (tenant_id, contact_id, channel, purpose) DO UPDATE
+    SET evidence_uri = EXCLUDED.evidence_uri, granted_at = now(), revoked_at = NULL,
+        expires_at = now() + interval '30 days'
+  RETURNING id INTO kid;
+  UPDATE consents SET expires_at = now() + interval '30 days' WHERE id = kid AND expires_at IS NULL;
+  INSERT INTO consent_events (tenant_id, consent_id, event, source, vapi_call_id)
+  VALUES (p_tenant, kid, 'granted', 'voice:log_callback_request', p_vapi_call_id);
+  RETURN kid;
 END $$;
 
 CREATE OR REPLACE FUNCTION release_call_slot(p_vapi_call_id text)
