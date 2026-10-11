@@ -1,5 +1,5 @@
 {
-  "name": "Voice \u00b7 03 Tool backends (sync, 3s budget)",
+  "name": "Voice \u00b7 03 Tool backends (sync, 1s SoR budget)",
   "nodes": [
     {
       "parameters": {
@@ -199,11 +199,20 @@
         "url": "={{ $env.SOR_BASE_URL }}/identity/verify",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.toolCallId }}"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, caller: $json.caller, args: $json.args }) }}",
         "options": {
-          "timeout": 3000
+          "timeout": 1000
         }
       },
       "id": "d53cb2ed-d5fc-5e1a-a0cd-7525f1ee8d66",
@@ -228,11 +237,20 @@
         "url": "={{ $env.SOR_BASE_URL }}/schedule/availability",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.toolCallId }}"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, caller: $json.caller, args: $json.args }) }}",
         "options": {
-          "timeout": 3000
+          "timeout": 1000
         }
       },
       "id": "dc978963-f7c8-54d9-911f-bc47c4f78a3b",
@@ -257,11 +275,20 @@
         "url": "={{ $env.SOR_BASE_URL }}/schedule/book",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.toolCallId }}"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, caller: $json.caller, args: $json.args }) }}",
         "options": {
-          "timeout": 3000
+          "timeout": 1000
         }
       },
       "id": "09cd74e6-7eda-5b8d-aa3f-1fe2800fbd2e",
@@ -286,11 +313,20 @@
         "url": "={{ $env.SOR_BASE_URL }}/tasks/callback",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.toolCallId }}"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, caller: $json.caller, args: $json.args }) }}",
         "options": {
-          "timeout": 3000
+          "timeout": 1000
         }
       },
       "id": "3d77de21-a331-5d62-bb3c-f09bd4895c43",
@@ -489,7 +525,7 @@
   "active": false,
   "meta": {
     "templateCredsSetupCompleted": false,
-    "notes": "System-of-record calls for VAPI tools, forwarded by the edge. No retries: the edge enforces the deadline and speaks a fallback."
+    "notes": "System-of-record calls for VAPI tools, forwarded by the edge. No retries here: the edge retries on the secondary n8n inside a 2.5s budget, so the SoR MUST honour Idempotency-Key (= VAPI toolCallId) or writes like book_appointment can double-apply."
   },
   "tags": [
     {

@@ -26,10 +26,42 @@ tags:
   - name: admin
 
 paths:
+  /webhook/vapi-tool-call:
+    post:
+      tags: [vapi]
+      summary: Single VAPI server URL for all message types (bound by onboarding)
+      description: |
+        Same handler as `/vapi/events` + `/vapi/tools`, dispatched on `message.type`.
+        - `assistant-request`: acquires a per-number concurrency slot. Returns `squadId` or
+          `assistantId`; returns a transfer `destination` to the tenant failover line when at
+          capacity or when the database is unreachable.
+        - `tool-calls`: n8n primary (1.5 s) → secondary (remaining), 2.5 s total; then a spoken
+          transfer notice plus a live transfer via `call.monitor.controlUrl`.
+        - `status-update` (ended) / `end-of-call-report`: releases the slot, then forwards to n8n.
+      security: [{ vapiSecret: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VapiServerMessage' }
+      responses:
+        '200':
+          description: Shape depends on `message.type`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AssistantRequestResponse'
+                  - $ref: '#/components/schemas/ToolCallsResponse'
+                  - $ref: '#/components/schemas/TransferDestinationResponse'
+                  - $ref: '#/components/schemas/Ack'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Tenant could not be resolved from the dialed number. VAPI ends the call. }
+
   /vapi/events:
     post:
       tags: [vapi]
-      summary: VAPI server messages (assistant-request, status-update, end-of-call-report, hang, transfer-destination-request)
+      summary: Alias of /webhook/vapi-tool-call (assistant-request, status-update, end-of-call-report, hang, transfer-destination-request)
       security: [{ vapiSecret: [] }]
       requestBody:
         required: true
@@ -112,7 +144,10 @@ paths:
                 toolCallId: { type: string }
       responses:
         '200':
-          description: Speakable result. For verify_identity, `result` is exactly `VERIFIED` or `NOT_VERIFIED`.
+          description: |
+            Speakable result. For verify_identity, `result` is exactly `VERIFIED` or `NOT_VERIFIED`.
+            n8n forwards `toolCallId` to the system of record as `Idempotency-Key`; the SoR must
+            dedupe on it, because the edge may retry on the secondary n8n.
           content:
             application/json:
               schema:
@@ -375,10 +410,17 @@ components:
 
     AssistantRequestResponse:
       type: object
-      description: Either an inline assistant or a saved assistantId.
+      description: Exactly one of squadId, assistantId, destination (skip the AI, transfer), or error.
       properties:
+        squadId: { type: string }
         assistantId: { type: string }
-        assistant: { type: object, additionalProperties: true }
+        destination:
+          type: object
+          required: [type, number]
+          properties:
+            type: { type: string, const: number }
+            number: { $ref: '#/components/schemas/E164' }
+            message: { type: string, description: Spoken before the transfer (busy message). }
         error: { type: string, description: Returning an error ends the call. }
 
     TransferDestinationResponse:

@@ -13,10 +13,14 @@ SET search_path = voice, public;
 -- ---------------------------------------------------------------------------
 CREATE TABLE tenants (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_key         text UNIQUE,                -- client_config.json client_id (onboarding upsert key)
   name               text NOT NULL,
   jurisdiction       text NOT NULL,              -- 'US', 'US-CA', 'EU-DE', 'CA', 'CA-QC', ...
   vapi_org_mode      text NOT NULL DEFAULT 'shared' CHECK (vapi_org_mode IN ('shared','dedicated')),
-  vapi_assistant_id  text,                       -- null => assistant built dynamically on assistant-request
+  vapi_assistant_id  text,                       -- single (or auto-detect multilingual) assistant
+  vapi_squad_id      text,                       -- per-language squad; wins over vapi_assistant_id
+  vapi_assistant_ids jsonb NOT NULL DEFAULT '{}', -- {"en-US": "asst_..", ...}, maintained by onboarding
+  failover_number    text CHECK (failover_number ~ '^\+[1-9][0-9]{6,14}$'),
   outbound_vapi_phone_id text,                   -- caller ID for outbound jobs (must be one of this tenant's numbers)
   hipaa              boolean NOT NULL DEFAULT false,
   baa_verified_at    timestamptz,
@@ -36,6 +40,9 @@ CREATE TABLE phone_numbers (
   tenant_id        uuid NOT NULL REFERENCES tenants(id),
   e164             text NOT NULL UNIQUE CHECK (e164 ~ '^\+[1-9][0-9]{6,14}$'),
   vapi_phone_id    text NOT NULL UNIQUE,         -- resolution key for inbound calls
+  provider         text NOT NULL DEFAULT 'twilio' CHECK (provider IN ('twilio','vonage','telnyx','vapi','sip')),
+  line_type        text,
+  max_concurrent_calls int NOT NULL DEFAULT 10 CHECK (max_concurrent_calls BETWEEN 1 AND 1000),
   stir_attestation text CHECK (stir_attestation IN ('A','B','C')),
   created_at       timestamptz NOT NULL DEFAULT now()
 );
@@ -130,6 +137,17 @@ CREATE TABLE call_state (
   updated_at        timestamptz NOT NULL DEFAULT now()
 );
 
+-- Concurrency leases. Acquired on assistant-request, released on status-update(ended) /
+-- end-of-call-report. Leases expire so a lost "ended" event can't leak a slot forever.
+CREATE TABLE active_calls (
+  vapi_call_id     text PRIMARY KEY,
+  tenant_id        uuid NOT NULL REFERENCES tenants(id),
+  phone_number_id  uuid NOT NULL REFERENCES phone_numbers(id),
+  acquired_at      timestamptz NOT NULL DEFAULT now(),
+  lease_expires_at timestamptz NOT NULL
+);
+CREATE INDEX ON active_calls (phone_number_id, lease_expires_at);
+
 CREATE TABLE idempotency_keys (
   key        text PRIMARY KEY,
   tenant_id  uuid NOT NULL,
@@ -220,7 +238,7 @@ $$ SELECT NULLIF(current_setting('app.tenant_id', true), '')::uuid $$;
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['phone_numbers','contacts','consents','consent_events','calls',
+  FOREACH t IN ARRAY ARRAY['phone_numbers','contacts','consents','consent_events','calls','active_calls',
                            'call_state','idempotency_keys','outbound_jobs','dsar_requests']
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
@@ -240,9 +258,11 @@ CREATE POLICY dnc_write ON dnc_entries FOR INSERT WITH CHECK (tenant_id = curren
 -- Inbound tenant resolution happens before a tenant is known: expose a narrow
 -- SECURITY DEFINER lookup instead of granting the edge role access to phone_numbers.
 CREATE OR REPLACE FUNCTION resolve_tenant_by_vapi_phone(p_vapi_phone_id text)
-RETURNS TABLE (tenant_id uuid, hipaa boolean, jurisdiction text, vapi_assistant_id text)
+RETURNS TABLE (tenant_id uuid, hipaa boolean, jurisdiction text, vapi_assistant_id text,
+               vapi_squad_id text, failover_number text, max_concurrent_calls int)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = voice AS $$
-  SELECT t.id, t.hipaa, t.jurisdiction, t.vapi_assistant_id
+  SELECT t.id, t.hipaa, t.jurisdiction, t.vapi_assistant_id,
+         t.vapi_squad_id, t.failover_number, p.max_concurrent_calls
   FROM phone_numbers p JOIN tenants t ON t.id = p.tenant_id
   WHERE p.vapi_phone_id = p_vapi_phone_id AND t.status = 'active'
 $$;
@@ -388,6 +408,52 @@ BEGIN
   RETURN true;
 END $$;
 
+-- Onboarding pre-flight: who owns this number? (phone_numbers is RLS-scoped, so a
+-- tenant can't see a conflicting owner; an upsert would silently no-op instead of failing.)
+CREATE OR REPLACE FUNCTION phone_number_owner(p_e164 text)
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER AS
+$$ SELECT tenant_id FROM phone_numbers WHERE e164 = p_e164 $$;
+
+-- Per-number concurrency gate. The advisory lock serialises acquirers for one number, so
+-- N simultaneous inbound calls can never all see "max-1 active" and all get in.
+-- Idempotent per call id (VAPI may resend assistant-request).
+CREATE OR REPLACE FUNCTION acquire_call_slot(p_vapi_phone_id text, p_vapi_call_id text, p_lease_seconds int DEFAULT 1020)
+RETURNS TABLE (granted boolean, active int, max_allowed int)
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE pn phone_numbers%ROWTYPE; n int;
+BEGIN
+  SELECT * INTO pn FROM phone_numbers WHERE vapi_phone_id = p_vapi_phone_id;
+  IF NOT FOUND THEN RETURN QUERY SELECT false, 0, 0; RETURN; END IF;
+  PERFORM set_tenant(pn.tenant_id);
+  PERFORM pg_advisory_xact_lock(hashtextextended(pn.id::text, 0));
+
+  IF EXISTS (SELECT 1 FROM active_calls WHERE vapi_call_id = p_vapi_call_id) THEN
+    SELECT count(*) INTO n FROM active_calls WHERE phone_number_id = pn.id;
+    RETURN QUERY SELECT true, n, pn.max_concurrent_calls; RETURN;
+  END IF;
+
+  DELETE FROM active_calls WHERE phone_number_id = pn.id AND lease_expires_at < now();
+  SELECT count(*) INTO n FROM active_calls WHERE phone_number_id = pn.id;
+  IF n >= pn.max_concurrent_calls THEN
+    RETURN QUERY SELECT false, n, pn.max_concurrent_calls; RETURN;
+  END IF;
+
+  INSERT INTO active_calls (vapi_call_id, tenant_id, phone_number_id, lease_expires_at)
+  VALUES (p_vapi_call_id, pn.tenant_id, pn.id, now() + make_interval(secs => p_lease_seconds));
+  RETURN QUERY SELECT true, n + 1, pn.max_concurrent_calls;
+END $$;
+
+CREATE OR REPLACE FUNCTION release_call_slot(p_vapi_call_id text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE t uuid;
+BEGIN
+  SELECT tenant_id INTO t FROM active_calls WHERE vapi_call_id = p_vapi_call_id;
+  IF t IS NULL THEN RETURN false; END IF;
+  PERFORM set_tenant(t);
+  DELETE FROM active_calls WHERE vapi_call_id = p_vapi_call_id;
+  RETURN true;
+END $$;
+
 -- Pin search_path on every function: callers (n8n, edge) won't have `voice` on theirs,
 -- and an unpinned path on a SECURITY DEFINER function is a hijack vector.
 DO $$
@@ -401,6 +467,10 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- Roles
 -- ---------------------------------------------------------------------------
+-- Run this file as voice_owner (owns all objects). voice_owner needs BYPASSRLS because
+-- FORCE RLS also applies to table owners, and the SECURITY DEFINER lookups
+-- (resolve_tenant_by_vapi_phone, acquire/release_call_slot) run before a tenant is known.
+-- CREATE ROLE voice_owner NOLOGIN BYPASSRLS;
 -- CREATE ROLE voice_app LOGIN PASSWORD '...';     -- edge + n8n; NO BYPASSRLS
 -- GRANT USAGE ON SCHEMA voice TO voice_app;
 -- GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA voice TO voice_app;

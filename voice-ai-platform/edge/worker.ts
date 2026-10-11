@@ -4,13 +4,19 @@
  * Responsibilities (everything on the synchronous voice path):
  *   - Authenticate VAPI server messages (X-Vapi-Secret, constant-time).
  *   - Resolve tenant from the dialed number / server-set call metadata — never from tool args.
- *   - Answer `assistant-request` and `transfer-destination-request` from cached tenant config.
- *   - Execute tool calls with idempotency, PHI gating and a hard deadline.
+ *   - Answer `assistant-request`: per-number concurrency gate, then squad/assistant id —
+ *     or a transfer to the tenant's failover line when full or when the DB is down.
+ *   - Execute tool calls with idempotency, PHI gating and a 2,500 ms backend budget
+ *     (n8n primary → n8n secondary → live SIP transfer to the failover line).
+ *   - Release concurrency slots on status-update(ended) / end-of-call-report.
  *   - Forward async events (end-of-call-report, status-update, hang) to n8n, HMAC-signed,
  *     after acknowledging VAPI.
  *
  * Bindings (wrangler.toml): HYPERDRIVE (Postgres), TENANT_KV (KV), secrets VAPI_WEBHOOK_SECRET,
- * EDGE_N8N_SIGNING_KEY, N8N_EVENTS_URL, N8N_TOOLS_URL.
+ * EDGE_N8N_SIGNING_KEY, N8N_EVENTS_URL, N8N_TOOLS_URL, N8N_TOOLS_URL_SECONDARY.
+ *
+ * Routes: POST /webhook/vapi-tool-call (all message types; the URL onboarding binds),
+ *         POST /vapi/events and /vapi/tools (aliases).
  *
  * Logging rule: log request ids, tool names, durations, status. NEVER arguments or results.
  */
@@ -23,6 +29,7 @@ export interface Env {
   EDGE_N8N_SIGNING_KEY: string;
   N8N_EVENTS_URL: string;
   N8N_TOOLS_URL: string;
+  N8N_TOOLS_URL_SECONDARY?: string;
 }
 
 type Tenant = {
@@ -32,17 +39,21 @@ type Tenant = {
   jurisdiction: string;
   timezone: string;
   language: string;
-  voiceId: string;
+  busyMessage: string;
   recordingEnabled: boolean;
   transferNumber: string;
-  assistantId?: string | null;
+  assistantId: string | null;
+  squadId: string | null;
 };
 
 type ToolCall = { id: string; type: "function"; function: { name: string; arguments: Record<string, unknown> | string } };
 type ToolResult = { toolCallId: string; result?: string; error?: string };
 
 const MAX_BODY = 1_000_000;
-const TOOL_DEADLINE_MS = 3_500; // below the shortest tool timeoutSeconds in vapi/tools.json
+const BACKEND_BUDGET_MS = 2_500; // n8n primary + secondary combined; VAPI tool timeout is 3 s
+const PRIMARY_SHARE_MS = 1_500; // primary gets this much, secondary gets the rest
+const SLOT_LEASE_SECONDS = 900 + 120; // assistant maxDurationSeconds + margin
+const ROUTES = new Set(["/webhook/vapi-tool-call", "/vapi/events", "/vapi/tools"]);
 const PHI_TOOLS = new Set(["check_availability", "book_appointment"]);
 const N8N_TOOLS = new Set(["verify_identity", "check_availability", "book_appointment", "log_callback_request"]);
 
@@ -51,7 +62,7 @@ export default {
     const url = new URL(req.url);
     const requestId = req.headers.get("x-request-id") ?? crypto.randomUUID();
 
-    if (req.method !== "POST" || !["/vapi/events", "/vapi/tools"].includes(url.pathname)) {
+    if (req.method !== "POST" || !ROUTES.has(url.pathname)) {
       return new Response("not found", { status: 404 });
     }
     if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY) {
@@ -76,7 +87,18 @@ export default {
     const sql = postgres(env.HYPERDRIVE.connectionString, { max: 5, fetch_types: false, prepare: true });
     const t0 = Date.now();
     try {
-      const tenant = await resolveTenant(msg, env, sql);
+      let tenant: Tenant | null;
+      try {
+        tenant = await resolveTenant(msg, env, sql);
+      } catch (e) {
+        // DB unreachable. For a ringing call, hand it to humans using the last-known-good copy.
+        if (msg.type === "assistant-request") {
+          const lkg = await lastKnownGood(msg, env);
+          log(requestId, msg.type, lkg ? "db_down_failover" : "db_down_no_lkg", t0);
+          if (lkg?.transferNumber) return json(failoverDestination(lkg));
+        }
+        throw e;
+      }
       if (!tenant) {
         log(requestId, msg.type, "tenant_unresolved", t0);
         // For assistant-request, an error makes VAPI end the call; better than routing to the wrong tenant.
@@ -84,12 +106,30 @@ export default {
       }
 
       switch (msg.type) {
-        case "assistant-request":
-          return json(tenant.assistantId ? { assistantId: tenant.assistantId } : { assistant: buildAssistant(tenant) });
+        case "assistant-request": {
+          const phoneId = msg.call?.phoneNumberId ?? msg.phoneNumber?.id;
+          let slot: { granted: boolean; active: number; max_allowed: number } | undefined;
+          try {
+            [slot] = await sql<{ granted: boolean; active: number; max_allowed: number }[]>`
+              SELECT * FROM voice.acquire_call_slot(${phoneId}, ${msg.call?.id}, ${SLOT_LEASE_SECONDS})`;
+          } catch {
+            // Tenant came from cache but the DB is down: tools won't work either, so go to humans.
+            log(requestId, msg.type, "slot_gate_db_error_failover", t0);
+            return json(failoverDestination(tenant));
+          }
+          if (!slot?.granted) {
+            log(requestId, msg.type, `at_capacity ${slot?.active}/${slot?.max_allowed}`, t0);
+            return json(failoverDestination(tenant));
+          }
+          if (tenant.squadId) return json({ squadId: tenant.squadId });
+          if (tenant.assistantId) return json({ assistantId: tenant.assistantId });
+          ctx.waitUntil(releaseSlot(sql, msg.call?.id));
+          return json({ error: "tenant has no assistant provisioned" }, 500);
+        }
 
         case "tool-calls": {
           const calls: ToolCall[] = msg.toolCallList ?? [];
-          const results = await Promise.all(calls.map((tc) => runTool(tc, msg, tenant, env, sql, requestId)));
+          const results = await Promise.all(calls.map((tc) => runTool(tc, msg, tenant!, env, sql, requestId, ctx)));
           log(requestId, "tool-calls", calls.map((c) => c.function.name).join(","), t0);
           return json({ results });
         }
@@ -105,6 +145,10 @@ export default {
 
         case "end-of-call-report":
         case "status-update":
+          if (msg.type === "end-of-call-report" || msg.status === "ended") {
+            await releaseSlot(sql, msg.call?.id); // before ack: a leaked slot blocks a real caller
+          }
+        // falls through
         case "hang":
           ctx.waitUntil(forwardToN8n(env.N8N_EVENTS_URL, { tenantId: tenant.id, message: msg }, env, requestId));
           return json({ ok: true });
@@ -131,8 +175,10 @@ async function resolveTenant(msg: any, env: Env, sql: postgres.Sql): Promise<Ten
   const cached = await env.TENANT_KV.get<Tenant>(cacheKey, "json");
   if (cached) return assertMetadataMatches(cached, call);
 
-  const rows = await sql<{ tenant_id: string; hipaa: boolean; jurisdiction: string; vapi_assistant_id: string | null }[]>`
-    SELECT * FROM voice.resolve_tenant_by_vapi_phone(${phoneId})`;
+  const rows = await sql<{
+    tenant_id: string; hipaa: boolean; jurisdiction: string; vapi_assistant_id: string | null;
+    vapi_squad_id: string | null; failover_number: string | null;
+  }[]>`SELECT * FROM voice.resolve_tenant_by_vapi_phone(${phoneId})`;
   if (rows.length === 0) return null;
 
   // Display/voice config is non-sensitive and stored in KV by the admin API on tenant update.
@@ -142,15 +188,33 @@ async function resolveTenant(msg: any, env: Env, sql: postgres.Sql): Promise<Ten
     hipaa: rows[0].hipaa,
     jurisdiction: rows[0].jurisdiction,
     assistantId: rows[0].vapi_assistant_id,
+    squadId: rows[0].vapi_squad_id,
     name: profile.name ?? "our office",
     timezone: profile.timezone ?? "America/New_York",
-    language: profile.language ?? "en",
-    voiceId: profile.voiceId ?? "",
+    language: profile.language ?? "en-US",
+    busyMessage: profile.busyMessage ?? "All of our lines are busy. Transferring you to a team member.",
     recordingEnabled: (profile.recordingEnabled ?? false) && !rows[0].hipaa,
-    transferNumber: profile.transferNumber ?? "",
+    transferNumber: rows[0].failover_number ?? profile.transferNumber ?? "",
   };
-  await env.TENANT_KV.put(cacheKey, JSON.stringify(tenant), { expirationTtl: 60 });
+  await Promise.all([
+    env.TENANT_KV.put(cacheKey, JSON.stringify(tenant), { expirationTtl: 60 }),
+    env.TENANT_KV.put(`tenant:lkg:${phoneId}`, JSON.stringify(tenant)), // no TTL: used only when the DB is down
+  ]);
   return assertMetadataMatches(tenant, call);
+}
+
+async function lastKnownGood(msg: any, env: Env): Promise<Tenant | null> {
+  const phoneId = msg.call?.phoneNumberId ?? msg.phoneNumber?.id;
+  return phoneId ? env.TENANT_KV.get<Tenant>(`tenant:lkg:${phoneId}`, "json") : null;
+}
+
+/** assistant-request answer that skips the AI and transfers straight to the human line. */
+function failoverDestination(t: Tenant) {
+  return { destination: { type: "number", number: t.transferNumber, message: t.busyMessage } };
+}
+
+async function releaseSlot(sql: postgres.Sql, callId: string | undefined): Promise<void> {
+  if (callId) await sql`SELECT voice.release_call_slot(${callId})`;
 }
 
 /** Outbound calls carry server-set metadata.tenantId; it must agree with the number's owner. */
@@ -162,7 +226,7 @@ function assertMetadataMatches(tenant: Tenant, call: any): Tenant | null {
 // ---------------------------------------------------------------------------
 // Tools
 // ---------------------------------------------------------------------------
-async function runTool(tc: ToolCall, msg: any, tenant: Tenant, env: Env, sql: postgres.Sql, requestId: string): Promise<ToolResult> {
+async function runTool(tc: ToolCall, msg: any, tenant: Tenant, env: Env, sql: postgres.Sql, requestId: string, ctx: ExecutionContext): Promise<ToolResult> {
   const name = tc.function.name;
   const args = typeof tc.function.arguments === "string" ? safeParse(tc.function.arguments) : tc.function.arguments ?? {};
   const callId: string = msg.call?.id;
@@ -194,7 +258,16 @@ async function runTool(tc: ToolCall, msg: any, tenant: Tenant, env: Env, sql: po
     } else if (name === "verify_identity" && state.verify_attempts >= 3) {
       result = { toolCallId: tc.id, result: "I wasn't able to verify you. Let me connect you with a team member." };
     } else if (N8N_TOOLS.has(name)) {
-      result = await callN8nTool(env, requestId, { tenantId: tenant.id, callId, caller, tool: name, args, toolCallId: tc.id });
+      const deadline = Date.now() + BACKEND_BUDGET_MS;
+      const out = await callN8nTool(env, requestId, deadline, { tenantId: tenant.id, callId, caller, tool: name, args, toolCallId: tc.id });
+      if (out === null) {
+        // Both backends down: don't leave the caller with an assistant that can't do anything.
+        ctx.waitUntil(liveTransfer(msg, tenant, requestId));
+        result = { toolCallId: tc.id, result: "I'm having trouble reaching our system, so I'm transferring you to a team member now." };
+        await tx`UPDATE voice.idempotency_keys SET response = ${tx.json(result as any)} WHERE key = ${tc.id}`;
+        return result;
+      }
+      result = { toolCallId: tc.id, result: out };
       if (name === "verify_identity") {
         const verified = result.result?.startsWith("VERIFIED") ?? false;
         await tx`
@@ -232,33 +305,47 @@ async function optOut(tx: postgres.TransactionSql, tenant: Tenant, callId: strin
   return { toolCallId, result: "Done. You've been removed from our call list and won't receive further automated calls." };
 }
 
-async function callN8nTool(env: Env, requestId: string, payload: Record<string, unknown>): Promise<ToolResult> {
-  const toolCallId = payload.toolCallId as string;
-  try {
-    const res = await signedPost(env.N8N_TOOLS_URL, payload, env, requestId, AbortSignal.timeout(TOOL_DEADLINE_MS));
-    if (!res.ok) throw new Error(`n8n ${res.status}`);
-    const out = (await res.json()) as { result?: string };
-    return { toolCallId, result: truncate(out.result ?? "Done.", 500) };
-  } catch {
-    // Speakable fallback inside the deadline — never leave the caller in silence.
-    return { toolCallId, result: "I'm having trouble reaching our system right now. I can transfer you to a team member." };
+/**
+ * n8n primary, then secondary, inside one absolute deadline. Returns the speakable result,
+ * or null when no backend answered in time (caller is then live-transferred).
+ * Retrying on the secondary can repeat a write the primary finished after its timeout. n8n forwards
+ * toolCallId as Idempotency-Key; the system of record MUST dedupe on it (book_appointment).
+ */
+async function callN8nTool(env: Env, requestId: string, deadline: number, payload: Record<string, unknown>): Promise<string | null> {
+  const targets = [env.N8N_TOOLS_URL, env.N8N_TOOLS_URL_SECONDARY].filter(Boolean) as string[];
+  for (let i = 0; i < targets.length; i++) {
+    const remaining = deadline - Date.now();
+    if (remaining < 200) break;
+    const budget = i === 0 && targets.length > 1 ? Math.min(PRIMARY_SHARE_MS, remaining) : remaining;
+    try {
+      const res = await signedPost(targets[i], payload, env, requestId, AbortSignal.timeout(budget));
+      if (!res.ok) throw new Error(`n8n ${res.status}`);
+      const out = (await res.json()) as { result?: string };
+      return truncate(out.result ?? "Done.", 500);
+    } catch {
+      log(requestId, "tool_backend_failed", `target=${i}`, deadline - BACKEND_BUDGET_MS);
+    }
   }
+  return null;
 }
 
-// ---------------------------------------------------------------------------
-// Assistant
-// ---------------------------------------------------------------------------
-function buildAssistant(t: Tenant) {
-  // Abbreviated: in production, load vapi/assistant.base.json at build time and substitute placeholders.
-  return {
-    name: `${t.name} — Voice Agent`,
-    firstMessage: `Hi, thanks for calling ${t.name}. I'm an automated AI assistant, and this call may be recorded for quality. How can I help you today?`,
-    compliancePlan: { hipaaEnabled: t.hipaa },
-    artifactPlan: { recordingEnabled: t.recordingEnabled },
-    voice: { provider: "11labs", voiceId: t.voiceId, model: "eleven_flash_v2_5" },
-    transcriber: { provider: "deepgram", model: "nova-3", language: t.language },
-    metadata: { tenantId: t.id, schemaVersion: "1" },
-  };
+/**
+ * Live call control: transfer the in-progress call to the tenant's failover line.
+ * Uses call.monitor.controlUrl (VAPI live call control; verify field names for your API version).
+ */
+async function liveTransfer(msg: any, tenant: Tenant, requestId: string): Promise<void> {
+  const controlUrl: string | undefined = msg.call?.monitor?.controlUrl;
+  if (!controlUrl || !tenant.transferNumber) {
+    log(requestId, "live_transfer_unavailable", controlUrl ? "no_number" : "no_control_url", Date.now());
+    return;
+  }
+  await new Promise((r) => setTimeout(r, 1_500)); // let the assistant finish the hand-off sentence
+  await fetch(controlUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ type: "transfer", destination: { type: "number", number: tenant.transferNumber } }),
+    signal: AbortSignal.timeout(5_000),
+  }).catch(() => log(requestId, "live_transfer_failed", "", Date.now()));
 }
 
 // ---------------------------------------------------------------------------

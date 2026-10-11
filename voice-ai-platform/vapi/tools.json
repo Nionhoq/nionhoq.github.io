@@ -1,5 +1,5 @@
 {
-  "$comment": "VAPI function tools. All point at the edge worker; the edge decides whether to answer from Postgres directly (hot path) or forward to n8n. Tenant is resolved from call.phoneNumberId / call metadata, NEVER from tool arguments. Keep descriptions specific: the LLM picks tools from them.",
+  "$comment": "VAPI function tools. All point at the edge worker (onboarding rewrites the host per environment); timeouts are 3 s and the edge answers within 2.5 s; the edge decides whether to answer from Postgres directly (hot path) or forward to n8n. Tenant is resolved from call.phoneNumberId / call metadata, NEVER from tool arguments. Keep descriptions specific: the LLM picks tools from them.",
   "tools": [
     {
       "type": "function",
@@ -10,18 +10,39 @@
         "parameters": {
           "type": "object",
           "properties": {
-            "last_name": { "type": "string", "description": "Caller's last name as spoken." },
-            "phone_last4": { "type": "string", "pattern": "^[0-9]{4}$" },
-            "zip": { "type": "string", "description": "Postal or ZIP code, if phone_last4 unavailable." }
+            "last_name": {
+              "type": "string",
+              "description": "Caller's last name as spoken."
+            },
+            "phone_last4": {
+              "type": "string",
+              "pattern": "^[0-9]{4}$"
+            },
+            "zip": {
+              "type": "string",
+              "description": "Postal or ZIP code, if phone_last4 unavailable."
+            }
           },
-          "required": ["last_name"]
+          "required": [
+            "last_name"
+          ]
         }
       },
       "messages": [
-        { "type": "request-start", "content": "One moment while I check that." },
-        { "type": "request-response-delayed", "content": "Still checking, thanks for your patience.", "timingMilliseconds": 2000 }
+        {
+          "type": "request-start",
+          "content": "One moment while I check that."
+        },
+        {
+          "type": "request-response-delayed",
+          "content": "Still checking, thanks for your patience.",
+          "timingMilliseconds": 2000
+        }
       ],
-      "server": { "url": "https://voice-edge.example.com/vapi/tools", "timeoutSeconds": 4 }
+      "server": {
+        "url": "https://voice-edge.example.com/webhook/vapi-tool-call",
+        "timeoutSeconds": 3
+      }
     },
     {
       "type": "function",
@@ -32,15 +53,40 @@
         "parameters": {
           "type": "object",
           "properties": {
-            "service": { "type": "string", "description": "Type of appointment requested." },
-            "earliest_date": { "type": "string", "format": "date", "description": "ISO date; resolve relative dates like 'next Tuesday' against today's date in the system prompt." },
-            "time_of_day": { "type": "string", "enum": ["morning", "afternoon", "evening", "any"] }
+            "service": {
+              "type": "string",
+              "description": "Type of appointment requested."
+            },
+            "earliest_date": {
+              "type": "string",
+              "format": "date",
+              "description": "ISO date; resolve relative dates like 'next Tuesday' against today's date in the system prompt."
+            },
+            "time_of_day": {
+              "type": "string",
+              "enum": [
+                "morning",
+                "afternoon",
+                "evening",
+                "any"
+              ]
+            }
           },
-          "required": ["service"]
+          "required": [
+            "service"
+          ]
         }
       },
-      "messages": [{ "type": "request-start", "content": "Let me look at the schedule." }],
-      "server": { "url": "https://voice-edge.example.com/vapi/tools", "timeoutSeconds": 4 }
+      "messages": [
+        {
+          "type": "request-start",
+          "content": "Let me look at the schedule."
+        }
+      ],
+      "server": {
+        "url": "https://voice-edge.example.com/webhook/vapi-tool-call",
+        "timeoutSeconds": 3
+      }
     },
     {
       "type": "function",
@@ -51,17 +97,35 @@
         "parameters": {
           "type": "object",
           "properties": {
-            "slot_id": { "type": "string", "description": "slot_id from check_availability." },
-            "notes": { "type": "string", "maxLength": 200, "description": "Brief non-clinical reason for visit." }
+            "slot_id": {
+              "type": "string",
+              "description": "slot_id from check_availability."
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Brief non-clinical reason for visit."
+            }
           },
-          "required": ["slot_id"]
+          "required": [
+            "slot_id"
+          ]
         }
       },
       "messages": [
-        { "type": "request-start", "content": "Booking that now." },
-        { "type": "request-failed", "content": "I wasn't able to complete that booking." }
+        {
+          "type": "request-start",
+          "content": "Booking that now."
+        },
+        {
+          "type": "request-failed",
+          "content": "I wasn't able to complete that booking."
+        }
       ],
-      "server": { "url": "https://voice-edge.example.com/vapi/tools", "timeoutSeconds": 6 }
+      "server": {
+        "url": "https://voice-edge.example.com/webhook/vapi-tool-call",
+        "timeoutSeconds": 3
+      }
     },
     {
       "type": "function",
@@ -69,9 +133,15 @@
       "function": {
         "name": "request_opt_out",
         "description": "Caller asked not to be called again (e.g. 'stop calling', 'remove me', 'do not call'). Call immediately; no confirmation question needed.",
-        "parameters": { "type": "object", "properties": {} }
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
       },
-      "server": { "url": "https://voice-edge.example.com/vapi/tools", "timeoutSeconds": 3 }
+      "server": {
+        "url": "https://voice-edge.example.com/webhook/vapi-tool-call",
+        "timeoutSeconds": 3
+      }
     },
     {
       "type": "function",
@@ -82,13 +152,28 @@
         "parameters": {
           "type": "object",
           "properties": {
-            "topic": { "type": "string", "maxLength": 200 },
-            "preferred_window": { "type": "string", "enum": ["morning", "afternoon", "evening", "any"] }
+            "topic": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "preferred_window": {
+              "type": "string",
+              "enum": [
+                "morning",
+                "afternoon",
+                "evening",
+                "any"
+              ]
+            }
           },
-          "required": ["topic"]
+          "required": [
+            "topic"
+          ]
         }
       },
-      "server": { "url": "https://voice-edge.example.com/vapi/tools" }
+      "server": {
+        "url": "https://voice-edge.example.com/webhook/vapi-tool-call"
+      }
     },
     {
       "type": "transferCall",
@@ -101,7 +186,10 @@
     },
     {
       "type": "endCall",
-      "function": { "name": "end_call", "description": "End the call after the caller's needs are met or after an opt-out is confirmed." }
+      "function": {
+        "name": "end_call",
+        "description": "End the call after the caller's needs are met or after an opt-out is confirmed."
+      }
     }
   ]
 }

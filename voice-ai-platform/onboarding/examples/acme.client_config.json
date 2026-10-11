@@ -1,0 +1,41 @@
+{
+  "$schema": "../client_config.schema.json",
+  "client_id": "client_enterprise_101",
+  "client_name": "Acme Corp",
+  "telephony": {
+    "phone_numbers": [
+      {
+        "number": "+18005550199",
+        "provider": "twilio",
+        "line_type": "inbound_support",
+        "max_concurrent_calls": 50
+      }
+    ],
+    "failover_routing_number": "+18005550100"
+  },
+  "localization": {
+    "default_language": "en-US",
+    "supported_languages": ["en-US", "fr-CA", "es-US"],
+    "auto_detect_language": false
+  },
+  "vapi_assistant": {
+    "model": "gpt-4.1-mini",
+    "voice": {
+      "provider": "elevenlabs",
+      "voice_id": "21m00Tcm4TlvDq8ikWAM",
+      "voices_by_language": {
+        "fr-CA": "REPLACE_WITH_NATIVE_FR_CA_VOICE_ID",
+        "es-US": "REPLACE_WITH_NATIVE_ES_VOICE_ID"
+      }
+    },
+    "server_url": "https://voice-edge.yourdomain.com"
+  },
+  "compliance": {
+    "jurisdiction": "CA-ON",
+    "pipeda_consent_required": true,
+    "hipaa_mode": false,
+    "recording_enabled": true,
+    "data_retention_days": 30,
+    "outbound_enabled": false
+  }
+}
