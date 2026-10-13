@@ -14,10 +14,37 @@
     -webkit-user-select: none; user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
+  /* Name entry overlay for the leaderboard (canvas can't do text input) */
+  #nameForm {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    background: #0d1420; border: 2px solid #7ee787; border-radius: 12px;
+    padding: 20px 24px; z-index: 10; text-align: center; display: none;
+    max-width: 86vw;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  #nameForm h3 { color: #7ee787; margin: 0 0 6px; font-size: 16px; }
+  #nameForm p { color: #8b98a9; margin: 0 0 12px; font-size: 12px; }
+  #nameForm input {
+    background: #0a0e14; border: 1px solid #2a3648; color: #e6edf3;
+    font-family: inherit; font-size: 15px; padding: 8px 10px; border-radius: 6px;
+    width: 180px; text-align: center; outline: none;
+  }
+  #nameForm input:focus { border-color: #7ee787; }
+  #nameForm button {
+    display: block; margin: 12px auto 0; background: #7ee787; color: #0a0e14;
+    border: none; font-family: inherit; font-weight: bold; font-size: 14px;
+    padding: 8px 24px; border-radius: 6px; cursor: pointer;
+  }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="nameForm">
+  <h3>🏆 NEW HIGH SCORE</h3>
+  <p>Routed <span id="nfScore">0</span> points — enter your name:</p>
+  <input id="nameInput" maxlength="12" placeholder="Your name" autocomplete="off" />
+  <button id="nameSave">Save score</button>
+</div>
 <script>
 'use strict';
 /* ============================================================
@@ -98,6 +125,31 @@ let flashTimer = 0;
 let best = 0;
 try { best = parseInt(localStorage.getItem('pipeline-rescue-best') || '0', 10) || 0; } catch (e) {}
 
+/* ---- Local leaderboard: top 5 scores on this browser ----
+   (A shared worldwide board would need a small backend service;
+   this keeps the game to one file with zero services.) */
+const BOARD_KEY = 'pipeline-rescue-board';
+let board = [];
+try {
+  const raw = JSON.parse(localStorage.getItem(BOARD_KEY) || '[]');
+  board = Array.isArray(raw) ? raw.filter(function (e) { return e && typeof e.s === 'number'; }) : [];
+} catch (e) { board = []; }
+let enteringName = false;
+
+function qualifies(score) {
+  if (score <= 0) return false;
+  return board.length < 5 || score > board[board.length - 1].s;
+}
+function saveScore(name, score) {
+  board.push({ n: name, s: score });
+  board.sort(function (a, b) { return b.s - a.s; });
+  board = board.slice(0, 5);
+  try { localStorage.setItem(BOARD_KEY, JSON.stringify(board)); } catch (e) {}
+}
+function cleanName(s) {
+  return (s || '').trim().replace(/[^a-zA-Z0-9 _-]/g, '').slice(0, 12) || 'ACE';
+}
+
 const router = { x: W / 2, w: 124, h: 26, targetX: W / 2, keys: 0 };
 
 function fallSpeed()    { return Math.min(150 + score * 1.6, 520); }   // px/s, ramps with score
@@ -157,6 +209,14 @@ function gameOver() {
     try { localStorage.setItem('pipeline-rescue-best', String(best)); } catch (e) {}
   }
   sfx.over();
+  if (qualifies(score)) {
+    enteringName = true;
+    document.getElementById('nfScore').textContent = score;
+    const input = document.getElementById('nameInput');
+    input.value = '';
+    document.getElementById('nameForm').style.display = 'block';
+    setTimeout(function () { input.focus(); }, 60);
+  }
 }
 
 function rotateTarget() {
@@ -450,25 +510,40 @@ function drawPaused() {
 function drawGameOver() {
   ctx.fillStyle = 'rgba(4,7,12,0.78)';
   ctx.fillRect(0, 0, W, H);
-  const pw = Math.min(420, W - 48), ph = 216;
+  const rows = board.length;
+  const pw = Math.min(430, W - 40), ph = Math.min(H - 60, 200 + rows * 22);
+  const top = H / 2 - ph / 2;
   ctx.fillStyle = '#0d1420';
-  roundRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 12); ctx.fill();
+  roundRect(W / 2 - pw / 2, top, pw, ph, 12); ctx.fill();
   ctx.strokeStyle = '#ff5f56'; ctx.lineWidth = 2;
-  roundRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 12); ctx.stroke();
+  roundRect(W / 2 - pw / 2, top, pw, ph, 12); ctx.stroke();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ff5f56';
   ctx.font = 'bold 24px ' + MONO;
-  ctx.fillText('QUEUE OVERFLOW', W / 2, H / 2 - 64);
+  ctx.fillText('QUEUE OVERFLOW', W / 2, top + 36);
   ctx.fillStyle = '#e6edf3';
   ctx.font = '15px ' + MONO;
-  ctx.fillText('Routed ' + routed + ' packets · Score ' + score, W / 2, H / 2 - 22);
-  ctx.fillStyle = '#8b98a9';
-  ctx.font = '13px ' + MONO;
-  ctx.fillText('Best ' + best + (score > 0 && score >= best ? ' — new record!' : ''), W / 2, H / 2 + 6);
-  if (Math.floor(Date.now() / 600) % 2 === 0) {
+  ctx.fillText('Routed ' + routed + ' packets · Score ' + score, W / 2, top + 64);
+  const medals = ['1ST', '2ND', '3RD', '4TH', '5TH'];
+  ctx.font = 'bold 12px ' + MONO;
+  ctx.fillStyle = '#7ee787';
+  ctx.fillText('— LOCAL LEADERBOARD —', W / 2, top + 94);
+  if (rows === 0) {
+    ctx.fillStyle = '#8b98a9';
+    ctx.font = '12px ' + MONO;
+    ctx.fillText('No scores yet — be the first.', W / 2, top + 118);
+  } else {
+    ctx.font = '12px ' + MONO;
+    for (let i = 0; i < rows; i++) {
+      ctx.fillStyle = i === 0 ? '#f5a623' : '#c3ccd8';
+      const label = medals[i] + '   ' + String(board[i].n).toUpperCase() + '   ·   ' + board[i].s;
+      ctx.fillText(label.length > 34 ? label.slice(0, 34) : label, W / 2, top + 116 + i * 22);
+    }
+  }
+  if (!enteringName && Math.floor(Date.now() / 600) % 2 === 0) {
     ctx.fillStyle = '#7ee787';
     ctx.font = 'bold 14px ' + MONO;
-    ctx.fillText('press R or tap to retry', W / 2, H / 2 + 46);
+    ctx.fillText('press R or tap to retry', W / 2, top + 116 + rows * 22 + 16);
   }
 }
 
@@ -530,7 +605,8 @@ window.addEventListener('keyup', function (e) {
 
 canvas.addEventListener('pointerdown', function (e) {
   ensureAudio();
-  if (state === 'menu' || state === 'over') { startGame(); return; }
+  if (state === 'menu') { startGame(); return; }
+  if (state === 'over') { if (!enteringName) startGame(); return; }
   if (state === 'paused') { togglePause(); return; }
   router.targetX = e.clientX;
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
@@ -538,6 +614,20 @@ canvas.addEventListener('pointerdown', function (e) {
 canvas.addEventListener('pointermove', function (e) {
   if (state !== 'playing') return;
   if (e.pointerType === 'touch' || e.buttons > 0) router.targetX = e.clientX;
+});
+
+/* Name entry for the leaderboard (HTML overlay; canvas can't do text input) */
+function submitName() {
+  if (!enteringName) return;
+  saveScore(cleanName(document.getElementById('nameInput').value), score);
+  document.getElementById('nameForm').style.display = 'none';
+  enteringName = false;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+document.getElementById('nameSave').addEventListener('click', submitName);
+document.getElementById('nameInput').addEventListener('keydown', function (e) {
+  e.stopPropagation(); // keep game keys (space/arrows/R/P) from firing while typing
+  if (e.key === 'Enter') submitName();
 });
 
 document.addEventListener('visibilitychange', function () {
