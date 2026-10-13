@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Free Tools | Nion Hoq</title>
+<meta name="description" content="Free tools built by Nion Hoq for job seekers. A job application tracker that runs in your browser. No accounts, no sign-ups." />
+<meta name="author" content="Nion Hoq" />
+<link rel="canonical" href="https://nionhoq.github.io/tools/" />
+<meta property="og:title" content="Free Tools | Nion Hoq" />
+<meta property="og:description" content="Free tools for job seekers. A job application tracker that runs in your browser — no accounts, no sign-ups." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://nionhoq.github.io/tools/" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../styles.css" />
+<script data-goatcounter="https://nionhoq.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<header id="top">
+  <div class="wrap">
+    <nav>
+      <a href="../index.html" class="brand"><span class="mark">N</span>Nion&nbsp;Hoq</a>
+      <div class="nav-links" id="navLinks">
+        <a href="../index.html#about">About</a>
+        <a href="../index.html#blog">Blog</a>
+        <a href="../index.html#contact">Get in touch</a>
+      </div>
+      <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+    </nav>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="sec-no">01</span><h2>Free Tools</h2><div class="sub">Small tools I built and use myself. Free, no accounts, no sign-ups.</div></div>
+    <div class="bento">
+      <div class="b wide reveal">
+        <span class="ic">📋</span>
+        <h3>Job Tracker Template</h3>
+        <p>Every application, its stage, and what's next — on one board. Add roles, move them through Applied, Screening, Interview, and Offer, and keep follow-ups where you can see them. Your entries save automatically and stay private in your own browser. Nothing is sent anywhere.</p>
+        <p>Prefer your own file? Download the tracker and open it in any browser, online or off.</p>
+        <div class="hero-cta">
+          <a href="../job-tracker/" class="btn btn-primary">Open the tracker →</a>
+          <a href="../job-tracker/index.html" download="job-tracker.html" class="btn btn-ghost">Download template</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <span>© <span id="year"></span> Nion Hoq</span>
+    <span>EDI &amp; Supply-Chain Integration · Founder of BrenneBeau · Consultant</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+  const burger = document.getElementById('burger'), navLinks = document.getElementById('navLinks');
+  burger.addEventListener('click', () => navLinks.classList.toggle('open'));
+  navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
+</script>
+</body>
+</html>
