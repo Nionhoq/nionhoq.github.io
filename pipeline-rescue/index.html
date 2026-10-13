@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Pipeline Rescue — an EDI arcade game</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0a0e14; overflow: hidden; }
+  canvas {
+    display: block;
+    touch-action: none;
+    cursor: crosshair;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+'use strict';
+/* ============================================================
+   PIPELINE RESCUE — an EDI arcade game
+   You are the integration specialist on call. EDI documents rain
+   down the wire. Catch the packets your trading partner expects,
+   let the rest drop. Three mistakes and the queue overflows.
+
+   Controls: Arrow keys / A D, mouse drag, or touch drag.
+             SPACE starts / pauses, R restarts, P pauses.
+   ============================================================ */
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+/* ---- Trading partners & document types (ANSI X12) ---- */
+const DOCS = [
+  { code: '850', name: 'Purchase Order',    partner: 'SPS Commerce',  color: '#f5a623' },
+  { code: '810', name: 'Invoice',           partner: 'TruCommerce',   color: '#4dd0e1' },
+  { code: '856', name: 'Ship Notice (ASN)', partner: 'Amazon Vendor', color: '#7ee787' },
+  { code: '940', name: 'Whse Ship Order',   partner: 'Retail Link',   color: '#e879f9' },
+];
+const MAX_ERRORS = 3;
+const ROUTES_PER_ROTATION = 8;   // successful catches before a new partner onboards
+
+/* ---- Audio: Web Audio API, zero audio files ---- */
+let audioCtx = null;
+function ensureAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) { /* audio unavailable — play silent */ }
+}
+function beep(freq, dur, type, delay) {
+  try {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime + (delay || 0);
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.07, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) { /* ignore */ }
+}
+const sfx = {
+  catch()  { beep(660, 0.08, 'square'); beep(990, 0.10, 'square', 0.06); },
+  error()  { beep(160, 0.25, 'sawtooth'); },
+  rotate() { beep(520, 0.09, 'triangle'); beep(780, 0.12, 'triangle', 0.09); },
+  over()   { beep(440, 0.15, 'sawtooth'); beep(330, 0.15, 'sawtooth', 0.14); beep(220, 0.30, 'sawtooth', 0.28); },
+  start()  { beep(392, 0.10, 'triangle'); beep(523, 0.14, 'triangle', 0.10); },
+};
+
+/* ---- Sizing ---- */
+let W = 0, H = 0;
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = Math.floor(W * dpr);
+  canvas.height = Math.floor(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---- Game state ---- */
+let state = 'menu';              // menu | playing | paused | over
+let score = 0, errors = 0, routed = 0, sinceRotation = 0;
+let target = 0;                  // index into DOCS: the doc type we are routing now
+let packets = [];
+let spawnTimer = 0;
+let banner = '', bannerTimer = 0;
+let flashTimer = 0;
+let best = 0;
+try { best = parseInt(localStorage.getItem('pipeline-rescue-best') || '0', 10) || 0; } catch (e) {}
+
+const router = { x: W / 2, w: 124, h: 26, targetX: W / 2, keys: 0 };
+
+function fallSpeed()    { return Math.min(150 + score * 1.6, 520); }   // px/s, ramps with score
+function spawnInterval() { return Math.max(0.42, 1.35 - score * 0.007); }
+
+function pickTarget(exclude) {
+  let n;
+  do { n = Math.floor(Math.random() * DOCS.length); } while (n === exclude);
+  return n;
+}
+
+function spawnPacket() {
+  // 55% chance the packet is the target type, otherwise a decoy
+  let di;
+  if (Math.random() < 0.55) {
+    di = target;
+  } else {
+    const others = [];
+    for (let i = 0; i < DOCS.length; i++) if (i !== target) others.push(i);
+    di = others[Math.floor(Math.random() * others.length)];
+  }
+  const w = 84, h = 44;
+  packets.push({
+    x: w / 2 + 10 + Math.random() * Math.max(1, W - w - 20),
+    y: -h,
+    vy: fallSpeed() * (0.9 + Math.random() * 0.25),
+    doc: di, w: w, h: h,
+    wob: Math.random() * Math.PI * 2,
+  });
+}
+
+function startGame() {
+  score = 0; errors = 0; routed = 0; sinceRotation = 0;
+  packets = []; spawnTimer = 0.4;
+  flashTimer = 0;
+  target = pickTarget(-1);
+  const d = DOCS[target];
+  banner = 'ROUTING ' + d.code + '  →  ' + d.partner.toUpperCase();
+  bannerTimer = 3.4;
+  router.x = W / 2; router.targetX = W / 2; router.keys = 0;
+  state = 'playing';
+  sfx.start();
+}
+
+function registerError(msg) {
+  errors++;
+  flashTimer = 0.35;
+  banner = msg; bannerTimer = 1.6;
+  sfx.error();
+  if (errors >= MAX_ERRORS) gameOver();
+}
+
+function gameOver() {
+  state = 'over';
+  if (score > best) {
+    best = score;
+    try { localStorage.setItem('pipeline-rescue-best', String(best)); } catch (e) {}
+  }
+  sfx.over();
+}
+
+function rotateTarget() {
+  target = pickTarget(target);
+  const d = DOCS[target];
+  banner = '⟳ NEW PARTNER ONBOARDED — ROUTING ' + d.code + '  →  ' + d.partner.toUpperCase();
+  bannerTimer = 2.6;
+  sinceRotation = 0;
+  sfx.rotate();
+}
+
+function togglePause() {
+  if (state === 'playing') state = 'paused';
+  else if (state === 'paused') state = 'playing';
+}
+
+/* ---- Update ---- */
+function update(dt) {
+  if (state !== 'playing') return;
+
+  // Router movement: keyboard velocity, eased toward pointer target
+  const speed = Math.max(560, W * 1.1);
+  if (router.keys !== 0) router.targetX += router.keys * speed * dt;
+  const half = router.w / 2 + 6;
+  router.targetX = Math.max(half, Math.min(W - half, router.targetX));
+  router.x += (router.targetX - router.x) * Math.min(1, dt * 14);
+  if (Math.abs(router.targetX - router.x) < 1) router.x = router.targetX;
+
+  // Spawn packets
+  spawnTimer -= dt;
+  if (spawnTimer <= 0) { spawnPacket(); spawnTimer = spawnInterval(); }
+
+  // Move packets, resolve catches and misses
+  const ry = H - 96; // router top edge
+  for (let i = packets.length - 1; i >= 0; i--) {
+    const p = packets[i];
+    p.y += p.vy * dt;
+    p.wob += dt * 3;
+
+    const caught = p.y + p.h >= ry &&
+                   p.y + p.h <= ry + router.h + 16 &&
+                   Math.abs(p.x - router.x) < (p.w + router.w) / 2 - 8;
+    if (caught) {
+      packets.splice(i, 1);
+      if (p.doc === target) {
+        score += 10; routed++; sinceRotation++;
+        sfx.catch();
+        if (sinceRotation >= ROUTES_PER_ROTATION) rotateTarget();
+      } else {
+        registerError('✖ WRONG PARTNER — ' + DOCS[p.doc].code + ' is not ' + DOCS[target].code);
+      }
+      continue;
+    }
+    if (p.y > H + 20) {
+      packets.splice(i, 1);
+      if (p.doc === target) registerError('✖ MISSED ' + DOCS[p.doc].code + ' — queue filling');
+      // decoys that hit the floor are simply ignored: correct play
+    }
+  }
+
+  if (bannerTimer > 0) bannerTimer -= dt;
+  if (flashTimer > 0) flashTimer -= dt;
+}
+
+/* ---- Drawing helpers ---- */
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+
+function drawBackground() {
+  ctx.fillStyle = '#0a0e14';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(120,160,200,0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 0; x <= W; x += 48) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+  for (let y = 0; y <= H; y += 48) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+  ctx.stroke();
+  // slow scanline sweep
+  const t = (Date.now() / 2400) % 1;
+  const sy = t * H;
+  const g = ctx.createLinearGradient(0, sy - 60, 0, sy + 60);
+  g.addColorStop(0, 'rgba(126,231,135,0)');
+  g.addColorStop(0.5, 'rgba(126,231,135,0.05)');
+  g.addColorStop(1, 'rgba(126,231,135,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, sy - 60, W, 120);
+}
+
+/* Top bar: score/queue only. The routing target gets its own full-width
+   strip below so nothing overlaps on narrow phone screens. */
+function drawHUD() {
+  const HH = 52;
+  ctx.fillStyle = '#0d1420';
+  ctx.fillRect(0, 0, W, HH);
+  ctx.strokeStyle = 'rgba(126,231,135,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, HH); ctx.lineTo(W, HH); ctx.stroke();
+
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#7ee787';
+  ctx.font = 'bold 15px ' + MONO;
+  ctx.fillText('SCORE ' + score, 14, 17);
+  ctx.fillStyle = '#8b98a9';
+  ctx.font = '11px ' + MONO;
+  ctx.fillText('BEST ' + best, 14, 37);
+
+  // error pips
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#8b98a9';
+  ctx.font = '11px ' + MONO;
+  ctx.fillText('QUEUE', W - 100, 17);
+  for (let i = 0; i < MAX_ERRORS; i++) {
+    ctx.fillStyle = i < errors ? '#ff5f56' : 'rgba(255,95,86,0.22)';
+    ctx.beginPath();
+    ctx.arc(W - 70 + i * 22, 17, 7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#8b98a9';
+  ctx.fillText('overflow in ' + (MAX_ERRORS - errors), W - 14, 37);
+}
+
+function drawTargetStrip() {
+  const y0 = 52, h = 44;
+  const d = DOCS[target];
+  ctx.fillStyle = '#0b1220';
+  ctx.fillRect(0, y0, W, h);
+  ctx.fillStyle = d.color + '55';
+  ctx.fillRect(0, y0 + h - 2, W, 2);
+
+  // shrink the headline until it fits the screen
+  const line1 = '▶ ROUTING ' + d.code + '  →  ' + d.partner.toUpperCase();
+  let fs = 14;
+  ctx.font = 'bold ' + fs + 'px ' + MONO;
+  while (ctx.measureText(line1).width > W - 28 && fs > 10) {
+    fs--;
+    ctx.font = 'bold ' + fs + 'px ' + MONO;
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = d.color;
+  ctx.fillText(line1, W / 2, y0 + 14);
+  ctx.fillStyle = '#8b98a9';
+  ctx.font = '10px ' + MONO;
+  ctx.fillText(d.name + ' — catch these, let the rest drop', W / 2, y0 + 31);
+
+  // transient banner sits below the strip, clear of everything
+  if (bannerTimer > 0 && banner) {
+    ctx.font = 'bold 13px ' + MONO;
+    const bw = Math.min(W - 40, ctx.measureText(banner).width + 40);
+    const by = y0 + h + 12;
+    ctx.fillStyle = 'rgba(13,20,32,0.94)';
+    roundRect(W / 2 - bw / 2, by, bw, 34, 8);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(126,231,135,0.4)';
+    ctx.lineWidth = 1;
+    roundRect(W / 2 - bw / 2, by, bw, 34, 8);
+    ctx.stroke();
+    ctx.fillStyle = '#e6edf3';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(banner, W / 2, by + 17);
+  }
+}
+
+function drawPackets() {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const p of packets) {
+    const d = DOCS[p.doc];
+    const wobX = Math.sin(p.wob) * 3;
+    const x = p.x - p.w / 2 + wobX, y = p.y;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    roundRect(x + 3, y + 4, p.w, p.h, 8); ctx.fill();
+    ctx.fillStyle = '#11161f';
+    roundRect(x, y, p.w, p.h, 8); ctx.fill();
+    ctx.strokeStyle = d.color; ctx.lineWidth = 2;
+    roundRect(x, y, p.w, p.h, 8); ctx.stroke();
+    ctx.fillStyle = d.color;
+    ctx.font = 'bold 17px ' + MONO;
+    ctx.fillText(d.code, p.x + wobX, y + 16);
+    ctx.fillStyle = '#8b98a9';
+    ctx.font = '9px ' + MONO;
+    ctx.fillText(d.name, p.x + wobX, y + 33);
+  }
+}
+
+function drawRouter() {
+  const ry = H - 96, d = DOCS[target];
+  ctx.fillStyle = d.color + '22';           // hex with alpha
+  roundRect(router.x - router.w / 2 - 8, ry - 10, router.w + 16, router.h + 20, 12);
+  ctx.fill();
+  ctx.fillStyle = '#161e2b';
+  roundRect(router.x - router.w / 2, ry, router.w, router.h, 8);
+  ctx.fill();
+  ctx.strokeStyle = d.color; ctx.lineWidth = 2;
+  roundRect(router.x - router.w / 2, ry, router.w, router.h, 8);
+  ctx.stroke();
+  ctx.fillStyle = d.color;
+  ctx.font = 'bold 13px ' + MONO;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(d.code, router.x, ry + router.h / 2 + 1);
+}
+
+function drawLegend() {
+  ctx.textBaseline = 'middle';
+  ctx.font = '11px ' + MONO;
+  const items = DOCS.map(d => ({ text: d.code + ' → ' + d.partner, color: d.color }));
+  const widths = items.map(it => ctx.measureText(it.text).width + 22);
+  const gap = 16;
+  // flow into rows so narrow screens wrap cleanly
+  const rows = [];
+  let row = [], rowW = 0;
+  for (let i = 0; i < items.length; i++) {
+    const w = widths[i];
+    if (row.length && rowW + gap + w > W - 24) { rows.push({ items: row, w: rowW }); row = []; rowW = 0; }
+    row.push({ it: items[i], w: w });
+    rowW += (row.length > 1 ? gap : 0) + w;
+  }
+  if (row.length) rows.push({ items: row, w: rowW });
+  rows.forEach((r, ri) => {
+    const y = H - 34 - (rows.length - 1 - ri) * 20;
+    let x = W / 2 - r.w / 2;
+    ctx.textAlign = 'left';
+    for (const c of r.items) {
+      ctx.fillStyle = c.it.color;
+      ctx.beginPath(); ctx.arc(x + 6, y, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#8b98a9';
+      ctx.fillText(c.it.text, x + 15, y);
+      x += c.w + gap;
+    }
+  });
+  ctx.textAlign = 'center';
+}
+
+/* ---- Screens ---- */
+function drawMenu() {
+  drawBackground();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#7ee787';
+  ctx.font = 'bold ' + Math.min(44, Math.floor(W / 11)) + 'px ' + MONO;
+  ctx.fillText('PIPELINE RESCUE', W / 2, H * 0.28);
+  ctx.fillStyle = '#8b98a9';
+  ctx.font = '14px ' + MONO;
+  ctx.fillText('an EDI arcade game', W / 2, H * 0.28 + 38);
+  ctx.fillStyle = '#e6edf3';
+  const ifs = W < 420 ? 12 : 13;
+  ctx.font = ifs + 'px ' + MONO;
+  ctx.textAlign = 'left';
+  const lines = [
+    '1 · Packets fall, stamped 850 · 810 · 856 · 940.',
+    '2 · The strip at the top says which number',
+    '     to catch right now.',
+    '3 · Slide the router underneath: arrow keys,',
+    '     mouse drag, or your finger.',
+    '4 · Right number caught: +10 points.',
+    '5 · Wrong catch, or a miss: the queue fills.',
+    '     Three mistakes and it overflows.',
+    '6 · Every 8 clean catches a new partner onboards',
+    '     and the target changes. It gets faster.',
+  ];
+  const lx = Math.max(18, W / 2 - 175);
+  lines.forEach((l, i) => ctx.fillText(l, lx, H * 0.42 + i * 22));
+  ctx.textAlign = 'center';
+  if (Math.floor(Date.now() / 600) % 2 === 0) {
+    ctx.fillStyle = '#7ee787';
+    ctx.font = 'bold 15px ' + MONO;
+    ctx.fillText('— press SPACE or tap to start —', W / 2, H * 0.42 + lines.length * 22 + 30);
+  }
+  ctx.fillStyle = '#5b6b7f';
+  ctx.font = '11px ' + MONO;
+  ctx.fillText('Built with AI · nionhoq.github.io', W / 2, H - 58);
+}
+
+function drawPaused() {
+  ctx.fillStyle = 'rgba(4,7,12,0.72)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = 'bold 26px ' + MONO;
+  ctx.fillText('PAUSED', W / 2, H / 2 - 14);
+  ctx.fillStyle = '#8b98a9';
+  ctx.font = '13px ' + MONO;
+  ctx.fillText('press P or SPACE to resume', W / 2, H / 2 + 18);
+}
+
+function drawGameOver() {
+  ctx.fillStyle = 'rgba(4,7,12,0.78)';
+  ctx.fillRect(0, 0, W, H);
+  const pw = Math.min(420, W - 48), ph = 216;
+  ctx.fillStyle = '#0d1420';
+  roundRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 12); ctx.fill();
+  ctx.strokeStyle = '#ff5f56'; ctx.lineWidth = 2;
+  roundRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 12); ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ff5f56';
+  ctx.font = 'bold 24px ' + MONO;
+  ctx.fillText('QUEUE OVERFLOW', W / 2, H / 2 - 64);
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = '15px ' + MONO;
+  ctx.fillText('Routed ' + routed + ' packets · Score ' + score, W / 2, H / 2 - 22);
+  ctx.fillStyle = '#8b98a9';
+  ctx.font = '13px ' + MONO;
+  ctx.fillText('Best ' + best + (score > 0 && score >= best ? ' — new record!' : ''), W / 2, H / 2 + 6);
+  if (Math.floor(Date.now() / 600) % 2 === 0) {
+    ctx.fillStyle = '#7ee787';
+    ctx.font = 'bold 14px ' + MONO;
+    ctx.fillText('press R or tap to retry', W / 2, H / 2 + 46);
+  }
+}
+
+/* ---- Main loop ---- */
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  update(dt);
+  if (state === 'menu') {
+    drawMenu();
+  } else {
+    drawBackground();
+    drawPackets();
+    drawRouter();
+    drawHUD();
+    drawTargetStrip();
+    drawLegend();
+    if (flashTimer > 0) {
+      ctx.fillStyle = 'rgba(255,60,50,' + (flashTimer * 0.5).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (state === 'paused') drawPaused();
+    if (state === 'over') drawGameOver();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---- Input ---- */
+const keysDown = {};
+function updateKeys() {
+  const right = keysDown['ArrowRight'] || keysDown['d'] || keysDown['D'];
+  const left = keysDown['ArrowLeft'] || keysDown['a'] || keysDown['A'];
+  router.keys = (right ? 1 : 0) - (left ? 1 : 0);
+}
+window.addEventListener('keydown', function (e) {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' ||
+      e.key === 'ArrowDown' || e.key === ' ') e.preventDefault();
+  if (e.repeat) return;
+  ensureAudio();
+  keysDown[e.key] = true;
+  updateKeys();
+  if (e.key === ' ' || e.key === 'Enter') {
+    if (state === 'menu' || state === 'over') startGame();
+    else togglePause();
+  }
+  if (e.key === 'p' || e.key === 'P') {
+    if (state === 'playing' || state === 'paused') togglePause();
+  }
+  if (e.key === 'r' || e.key === 'R') {
+    if (state === 'over' || state === 'paused') startGame();
+  }
+});
+window.addEventListener('keyup', function (e) {
+  keysDown[e.key] = false;
+  updateKeys();
+});
+
+canvas.addEventListener('pointerdown', function (e) {
+  ensureAudio();
+  if (state === 'menu' || state === 'over') { startGame(); return; }
+  if (state === 'paused') { togglePause(); return; }
+  router.targetX = e.clientX;
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+});
+canvas.addEventListener('pointermove', function (e) {
+  if (state !== 'playing') return;
+  if (e.pointerType === 'touch' || e.buttons > 0) router.targetX = e.clientX;
+});
+
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden && state === 'playing') state = 'paused';
+});
+</script>
+</body>
+</html>
