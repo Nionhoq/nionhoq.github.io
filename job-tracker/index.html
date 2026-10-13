@@ -306,6 +306,10 @@
           <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
           Download backup
         </button>
+        <button class="btn" id="downloadAppBtn" type="button" aria-label="Download this tracker as a file to keep">
+          <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+          Download page
+        </button>
       </div>
     </header>
 
@@ -387,7 +391,7 @@
             <article class="card"><div class="company-mark">1</div><h3>Capture</h3><p class="card-meta">Add a role as soon as it looks promising. A title, company, link, and next action are enough to begin.</p></article>
             <article class="card"><div class="company-mark">2</div><h3>Move</h3><p class="card-meta">Advance the card when the situation changes. Keep notes short and specific.</p></article>
             <article class="card"><div class="company-mark">3</div><h3>Follow up</h3><p class="card-meta">Give every active role a next action with a date. Review the radar two or three times a week.</p></article>
-            <article class="card"><div class="company-mark">4</div><h3>Back up</h3><p class="card-meta">Entries autosave in this browser. Download a JSON backup any time to switch devices; CSV is best for spreadsheets.</p></article>
+            <article class="card"><div class="company-mark">4</div><h3>Back up</h3><p class="card-meta">Entries autosave in this browser. Download a JSON backup any time to switch devices; CSV is best for spreadsheets. "Download page" up top saves your own copy of the tracker as a file.</p></article>
           </div>
         </div>
       </main>
@@ -592,6 +596,13 @@
         function csv(v) { return '"' + String(v || '').replace(/"/g, '""') + '"'; }
         var rows = [fields.join(',')].concat(applications.map(function (a) { return fields.map(function (f) { return csv(a[f]); }).join(','); }));
         downloadFile('job-tracker-' + todayKey() + '.csv', 'text/csv;charset=utf-8', rows.join('\n')); showToast('CSV exported');
+      });
+      $('#downloadAppBtn').addEventListener('click', function () {
+        $('#toast').classList.remove('show');
+        var html = '<!doctype html>\n' + document.documentElement.outerHTML;
+        html = html.replace('var applications = [];', 'var applications = ' + JSON.stringify(applications) + ';');
+        downloadFile('job-tracker.html', 'text/html;charset=utf-8', html);
+        showToast('Tracker file downloaded — open it in any browser');
       });
       $('#importBtn').addEventListener('click', function () { $('#fileInput').click(); });
       $('#fileInput').addEventListener('change', function () {
