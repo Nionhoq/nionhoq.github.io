@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Ward Campaigner — Dhaka Canvassing Battle</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f6f1e7; color: #222; user-select: none; -webkit-user-select: none;
+  }
+  #app { max-width: 520px; margin: 0 auto; padding: 10px 12px 24px; }
+  header { text-align: center; padding: 8px 0 2px; }
+  header h1 { margin: 0; font-size: 24px; letter-spacing: 1px; }
+  header p { margin: 4px 0 0; font-size: 13px; color: #666; }
+  #scorebar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #222; color: #fff; border-radius: 10px;
+    padding: 8px 12px; margin: 10px 0; font-size: 15px; font-weight: 600;
+  }
+  #timer.low { color: #ff7b7b; }
+  #banner { min-height: 24px; text-align: center; font-weight: 700; font-size: 15px; color: #8a5a00; margin: 2px 0 6px; }
+  #wrap { position: relative; }
+  canvas {
+    display: block; width: 100%; border-radius: 12px; border: 2px solid #d8cfae;
+    background: #fbf7ec; touch-action: none;
+  }
+  #hint { text-align: center; font-size: 12px; color: #888; margin-top: 6px; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10;
+  }
+  .card {
+    background: #fffdf7; border-radius: 14px; padding: 20px 22px; max-width: 440px; width: 100%;
+    max-height: 88vh; overflow-y: auto; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  }
+  .card h2 { margin: 0 0 6px; font-size: 22px; }
+  .card ol { padding-left: 20px; margin: 10px 0; font-size: 15px; line-height: 1.55; }
+  .card .fine { font-size: 12px; color: #777; margin-top: 8px; }
+  .bigbtn {
+    display: block; width: 100%; margin-top: 12px; padding: 12px;
+    font-size: 17px; font-weight: 700; border: none; border-radius: 10px;
+    background: #2e9e44; color: #fff; cursor: pointer; font-family: inherit;
+  }
+  #boardList { list-style: none; padding: 0; margin: 10px 0; font-size: 15px; }
+  #boardList li { padding: 4px 0; border-bottom: 1px dashed #ddd; }
+  #nameRow { display: flex; gap: 8px; margin-top: 10px; }
+  #nameInput { flex: 1; padding: 10px; font-size: 16px; border: 2px solid #ccc; border-radius: 8px; font-family: inherit; }
+  #saveScore { padding: 10px 16px; font-size: 15px; font-weight: 700; border: none; border-radius: 8px; background: #222; color: #fff; cursor: pointer; font-family: inherit; }
+  .hidden { display: none !important; }
+  footer { text-align: center; font-size: 11px; color: #999; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🚶 WARD CAMPAIGNER</h1>
+    <p>Dhanmondi maidan · 🛺 Rickshaw Dal vs 🪁 Ghuri Dal · 100% fictional parties</p>
+  </header>
+
+  <div id="scorebar">
+    <span>🛺 You: <b id="meCount">0</b></span>
+    <span id="timer">⏱ 90s</span>
+    <span><b id="rivalCount">0</b> :Rival 🪁</span>
+  </div>
+
+  <div id="banner"></div>
+  <div id="wrap"><canvas id="game" width="480" height="600"></canvas></div>
+  <div id="hint">Drag to walk · Arrow keys or WASD work too</div>
+
+  <footer>Built with AI · high scores stay on this device only</footer>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="card">
+    <h2>🚶 Ward Campaigner</h2>
+    <p style="margin:0;font-size:14px;color:#555">Election day in Dhanmondi. Walk the maidan, win the voters, beat Ghuri Dal's workers to them.</p>
+    <ol>
+      <li><b>Walk into gray voters</b> to convince them — they turn green and count for you.</li>
+      <li><b>Ghuri Dal workers (🪁)</b> flip voters red, including yours. Get there first.</li>
+      <li><b>📢 Grab the mic</b> to convince every undecided voter near you at once.</li>
+      <li><b>⛈ Monsoon:</b> everyone slows down and voters scatter. Push through it.</li>
+      <li><b>Most voters</b> when the 90-second timer ends wins the ward.</li>
+    </ol>
+    <button class="bigbtn" id="startBtn">Start canvassing</button>
+    <p class="fine">Rickshaw Dal and Ghuri Dal are 100% fictional. Any resemblance to real parties is coincidence.</p>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <h2 id="resultTitle">Canvassing over</h2>
+    <p id="resultLine" style="font-size:16px;margin:6px 0"></p>
+    <h3 style="margin:12px 0 4px;font-size:16px">🏆 Local leaderboard</h3>
+    <ul id="boardList"></ul>
+    <div id="nameRow" class="hidden">
+      <input id="nameInput" maxlength="12" placeholder="Your name">
+      <button id="saveScore">Save</button>
+    </div>
+    <button class="bigbtn" id="againBtn">Play again</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- Config ---------- */
+var W = 480, H = 600;
+var GAME_SECONDS = 90;
+var NEUTRAL = 0, ME = 1, RIVAL = 2;
+var VOTER_N = 14, RIVAL_N = 3;
+var CONVINCE_R = 28, FLIP_R = 24, MIC_R = 150;
+var BOARD_KEY = "ward-campaigner-board";
+var BEST_KEY = "ward-campaigner-best";
+
+/* ---------- State ---------- */
+var canvas, ctx;
+var player, voters, rivals, mics, popups, rings, drops;
+var timeLeft, elapsed, running;
+var rainT, rainNext;          // monsoon timing
+var micNext;                 // mic spawn timing
+var keys = {};
+var pointer = { down: false, x: 0, y: 0 };
+var pendingScore = 0;
+var rafId = null, lastTs = 0;
+var bannerTimer = null;
+
+/* ---------- Helpers ---------- */
+function $(id) { return document.getElementById(id); }
+function rand(a, b) { return a + Math.random() * (b - a); }
+function dist(ax, ay, bx, by) {
+  var dx = ax - bx, dy = ay - by;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+var audioCtx = null;
+function beep(freq, dur, type, vol, delay) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var t = audioCtx.currentTime + (delay || 0);
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = type || "sine";
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.06, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) {}
+}
+
+function showBanner(text, ms) {
+  $("banner").textContent = text;
+  if (bannerTimer) clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(function () { $("banner").textContent = ""; }, ms || 2500);
+}
+
+/* ---------- Setup ---------- */
+function resetGame() {
+  var i;
+  player = { x: W / 2, y: H / 2, r: 15, speed: 245 };
+  voters = [];
+  for (i = 0; i < VOTER_N; i++) {
+    voters.push({
+      x: rand(30, W - 30), y: rand(60, H - 30),
+      state: NEUTRAL, vx: 0, vy: 0, wt: 0, hop: rand(0, 6)
+    });
+  }
+  rivals = [];
+  for (i = 0; i < RIVAL_N; i++) {
+    rivals.push({ x: rand(40, W - 40), y: rand(40, 200), speed: 128 });
+  }
+  mics = []; popups = []; rings = []; drops = [];
+  for (i = 0; i < 70; i++) drops.push({ x: rand(0, W), y: rand(0, H), s: rand(280, 480) });
+  timeLeft = GAME_SECONDS; elapsed = 0;
+  rainT = 0; rainNext = 22;
+  micNext = 12;
+  updateScores();
+  var t = $("timer");
+  t.textContent = "⏱ " + GAME_SECONDS + "s";
+  t.classList.remove("low");
+}
+
+/* ---------- Update ---------- */
+function update(dt) {
+  elapsed += dt;
+  timeLeft -= dt;
+  if (timeLeft <= 0) { timeLeft = 0; endGame(); return; }
+  var t = $("timer");
+  t.textContent = "⏱ " + Math.ceil(timeLeft) + "s";
+  if (timeLeft <= 10) t.classList.add("low");
+
+  var monsoon = rainT > 0;
+  if (monsoon) {
+    rainT -= dt;
+    if (rainT <= 0) showBanner("Monsoon passes. Back to work!", 2000);
+  } else {
+    rainNext -= dt;
+    if (rainNext <= 0) {
+      rainT = 6; rainNext = 24;
+      showBanner("⛈ MONSOON! Everyone slows, voters scatter", 2500);
+      beep(400, 0.2, "sine", 0.06); beep(250, 0.3, "sine", 0.06, 0.2);
+    }
+  }
+
+  /* player movement: keyboard or pointer-seek */
+  var sp = player.speed * (monsoon ? 0.62 : 1);
+  var kx = (keys.ArrowRight || keys.d ? 1 : 0) - (keys.ArrowLeft || keys.a ? 1 : 0);
+  var ky = (keys.ArrowDown || keys.s ? 1 : 0) - (keys.ArrowUp || keys.w ? 1 : 0);
+  if (kx || ky) {
+    var kl = Math.sqrt(kx * kx + ky * ky);
+    player.x += (kx / kl) * sp * dt;
+    player.y += (ky / kl) * sp * dt;
+  } else if (pointer.down) {
+    var dx = pointer.x - player.x, dy = pointer.y - player.y;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 6) {
+      var step = Math.min(d, sp * dt);
+      player.x += (dx / d) * step;
+      player.y += (dy / d) * step;
+    }
+  }
+  player.x = Math.max(16, Math.min(W - 16, player.x));
+  player.y = Math.max(16, Math.min(H - 16, player.y));
+
+  /* voters: wander, scatter in monsoon, get convinced */
+  var i, v;
+  for (i = 0; i < voters.length; i++) {
+    v = voters[i];
+    v.hop += dt * 6;
+    v.wt -= dt;
+    if (v.wt <= 0) {
+      v.wt = rand(0.8, 2.4);
+      var vs = monsoon ? 130 : 42;
+      var a = rand(0, Math.PI * 2);
+      v.vx = Math.cos(a) * vs; v.vy = Math.sin(a) * vs;
+    }
+    v.x += v.vx * dt; v.y += v.vy * dt;
+    if (v.x < 14) { v.x = 14; v.vx = Math.abs(v.vx); }
+    if (v.x > W - 14) { v.x = W - 14; v.vx = -Math.abs(v.vx); }
+    if (v.y < 14) { v.y = 14; v.vy = Math.abs(v.vy); }
+    if (v.y > H - 14) { v.y = H - 14; v.vy = -Math.abs(v.vy); }
+    if (v.state === NEUTRAL && dist(player.x, player.y, v.x, v.y) < CONVINCE_R) {
+      v.state = ME;
+      popups.push({ x: v.x, y: v.y - 14, text: "+1", color: "#2e9e44", ttl: 0.9 });
+      beep(620 + Math.random() * 120, 0.07, "square", 0.045);
+      updateScores();
+    }
+  }
+
+  /* rivals: chase nearest non-rival voter, flip on touch, speed ramps */
+  var r, best, bd, j;
+  for (i = 0; i < rivals.length; i++) {
+    r = rivals[i];
+    r.speed = Math.min(195, 128 + elapsed * 0.8);
+    best = null; bd = 1e9;
+    for (j = 0; j < voters.length; j++) {
+      v = voters[j];
+      if (v.state === RIVAL) continue;
+      var dd = dist(r.x, r.y, v.x, v.y) - (v.state === ME ? 60 : 0); // prefer stealing yours
+      if (dd < bd) { bd = dd; best = v; }
+    }
+    if (best) {
+      var rx = best.x - r.x, ry = best.y - r.y;
+      var rl = Math.sqrt(rx * rx + ry * ry) || 1;
+      var rsp = r.speed * (monsoon ? 0.7 : 1);
+      r.x += (rx / rl) * rsp * dt;
+      r.y += (ry / rl) * rsp * dt;
+      if (dist(r.x, r.y, best.x, best.y) < FLIP_R) {
+        var wasMine = best.state === ME;
+        best.state = RIVAL;
+        popups.push({ x: best.x, y: best.y - 14, text: wasMine ? "stolen!" : "taken", color: "#d33", ttl: 0.9 });
+        beep(150, 0.12, "sine", 0.05);
+        if (wasMine) updateScores(); else updateScores();
+      }
+    }
+  }
+
+  /* mic pickups */
+  micNext -= dt;
+  if (micNext <= 0) {
+    micNext = rand(16, 24);
+    if (!mics.length) mics.push({ x: rand(40, W - 40), y: rand(60, H - 40), ttl: 9 });
+  }
+  for (i = mics.length - 1; i >= 0; i--) {
+    var m = mics[i];
+    m.ttl -= dt;
+    if (m.ttl <= 0) { mics.splice(i, 1); continue; }
+    if (dist(player.x, player.y, m.x, m.y) < 26) {
+      mics.splice(i, 1);
+      var got = 0;
+      for (j = 0; j < voters.length; j++) {
+        v = voters[j];
+        if (v.state === NEUTRAL && dist(player.x, player.y, v.x, v.y) < MIC_R) {
+          v.state = ME; got++;
+        }
+      }
+      rings.push({ x: player.x, y: player.y, r: 10, ttl: 0.5 });
+      popups.push({ x: player.x, y: player.y - 20, text: "📢 +" + got, color: "#8a5a00", ttl: 1.2 });
+      beep(500, 0.09, "square", 0.05); beep(650, 0.09, "square", 0.05, 0.09); beep(820, 0.14, "square", 0.05, 0.18);
+      showBanner("📢 Mic grab! " + got + " voters convinced at once", 2200);
+      updateScores();
+    }
+  }
+
+  /* popups + rings decay */
+  for (i = popups.length - 1; i >= 0; i--) {
+    popups[i].ttl -= dt; popups[i].y -= 34 * dt;
+    if (popups[i].ttl <= 0) popups.splice(i, 1);
+  }
+  for (i = rings.length - 1; i >= 0; i--) {
+    rings[i].ttl -= dt; rings[i].r += 420 * dt;
+    if (rings[i].ttl <= 0) rings.splice(i, 1);
+  }
+  if (monsoon) {
+    for (i = 0; i < drops.length; i++) {
+      drops[i].y += drops[i].s * dt;
+      if (drops[i].y > H) { drops[i].y = -10; drops[i].x = rand(0, W); }
+    }
+  }
+}
+
+/* ---------- Draw ---------- */
+function draw() {
+  var i;
+  ctx.clearRect(0, 0, W, H);
+  /* maidan + road grid */
+  ctx.fillStyle = "#fbf7ec"; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "#e7dfc8"; ctx.lineWidth = 2;
+  for (i = 1; i < 6; i++) {
+    ctx.beginPath(); ctx.moveTo((W / 6) * i, 0); ctx.lineTo((W / 6) * i, H); ctx.stroke();
+  }
+  for (i = 1; i < 8; i++) {
+    ctx.beginPath(); ctx.moveTo(0, (H / 8) * i); ctx.lineTo(W, (H / 8) * i); ctx.stroke();
+  }
+  ctx.fillStyle = "#c9bfa5"; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("DHANMONDI MAIDAN", W / 2, 22);
+  /* cha stalls (decoration) */
+  ctx.font = "20px serif"; ctx.textAlign = "center";
+  ctx.fillText("☕", 40, H - 30); ctx.fillText("☕", W - 40, 60); ctx.fillText("🌳", W - 50, H - 60);
+
+  /* voters */
+  for (i = 0; i < voters.length; i++) {
+    var v = voters[i];
+    var bob = Math.sin(v.hop) * 2;
+    ctx.beginPath();
+    ctx.arc(v.x, v.y + bob, 10, 0, Math.PI * 2);
+    ctx.fillStyle = v.state === ME ? "#2e9e44" : v.state === RIVAL ? "#d33" : "#9a9a9a";
+    ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.font = "bold 9px sans-serif";
+    ctx.fillText(v.state === ME ? "R" : v.state === RIVAL ? "G" : "?", v.x, v.y + bob + 3);
+  }
+
+  /* mic pickups */
+  ctx.font = "26px serif";
+  for (i = 0; i < mics.length; i++) {
+    var pulse = 1 + Math.sin(elapsed * 6) * 0.12;
+    ctx.save();
+    ctx.translate(mics[i].x, mics[i].y); ctx.scale(pulse, pulse);
+    ctx.fillText("📢", 0, 9);
+    ctx.restore();
+  }
+
+  /* rivals */
+  ctx.font = "26px serif";
+  for (i = 0; i < rivals.length; i++) {
+    ctx.fillText("🪁", rivals[i].x - 13, rivals[i].y + 9);
+  }
+
+  /* player */
+  ctx.font = "32px serif";
+  ctx.fillText("🛺", player.x - 16, player.y + 11);
+
+  /* rings + popups */
+  for (i = 0; i < rings.length; i++) {
+    ctx.beginPath(); ctx.arc(rings[i].x, rings[i].y, rings[i].r, 0, Math.PI * 2);
+    ctx.strokeStyle = "#8a5a00"; ctx.lineWidth = 3; ctx.stroke();
+  }
+  ctx.textAlign = "center";
+  for (i = 0; i < popups.length; i++) {
+    ctx.fillStyle = popups[i].color; ctx.font = "bold 14px sans-serif";
+    ctx.fillText(popups[i].text, popups[i].x, popups[i].y);
+  }
+
+  /* monsoon rain */
+  if (rainT > 0) {
+    ctx.strokeStyle = "rgba(70,120,180,0.45)"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (i = 0; i < drops.length; i++) {
+      ctx.moveTo(drops[i].x, drops[i].y);
+      ctx.lineTo(drops[i].x - 4, drops[i].y + 14);
+    }
+    ctx.stroke();
+    ctx.fillStyle = "rgba(70,120,180,0.12)"; ctx.fillRect(0, 0, W, H);
+  }
+}
+
+/* ---------- Scores ---------- */
+function updateScores() {
+  var me = 0, rv = 0, i;
+  for (i = 0; i < voters.length; i++) {
+    if (voters[i].state === ME) me++;
+    else if (voters[i].state === RIVAL) rv++;
+  }
+  $("meCount").textContent = me;
+  $("rivalCount").textContent = rv;
+  return { me: me, rival: rv };
+}
+
+/* ---------- Flow ---------- */
+function loop(ts) {
+  if (!running) return;
+  var dt = Math.min(0.05, (ts - lastTs) / 1000 || 0.016);
+  lastTs = ts;
+  update(dt);
+  if (running) draw();
+  if (running) rafId = requestAnimationFrame(loop);
+}
+
+function startGame() {
+  resetGame();
+  running = true;
+  $("menu").classList.add("hidden");
+  $("over").classList.add("hidden");
+  showBanner("Go! Win the voters 🛺", 2000);
+  lastTs = performance.now();
+  rafId = requestAnimationFrame(loop);
+}
+
+function endGame() {
+  running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  draw();
+  var s = updateScores();
+  pendingScore = s.me;
+  var title, line;
+  if (s.me > s.rival) {
+    title = "🎉 You win the ward!";
+    line = "Rickshaw Dal convinces " + s.me + " voters vs Ghuri Dal's " + s.rival + ". Dhanmondi is yours.";
+    beep(523, 0.12, "square", 0.06); beep(659, 0.12, "square", 0.06, 0.12); beep(784, 0.22, "square", 0.06, 0.24);
+  } else if (s.me < s.rival) {
+    title = "😤 Ghuri Dal takes it";
+    line = "You convinced " + s.me + " vs their " + s.rival + ". Walk faster next time.";
+    beep(300, 0.2, "sine", 0.06); beep(220, 0.3, "sine", 0.06, 0.2);
+  } else {
+    title = "🤝 Dead heat!";
+    line = "Both at " + s.me + " voters. The maidan remains undecided.";
+    beep(440, 0.2, "sine", 0.06);
+  }
+  $("resultTitle").textContent = title;
+  $("resultLine").textContent = line;
+  try {
+    var best = parseInt(localStorage.getItem(BEST_KEY) || "0", 10);
+    if (s.me > best) localStorage.setItem(BEST_KEY, String(s.me));
+  } catch (e) {}
+  renderBoardForm();
+  $("over").classList.remove("hidden");
+}
+
+/* ---------- Local leaderboard ---------- */
+function getBoard() {
+  try { return JSON.parse(localStorage.getItem(BOARD_KEY) || "[]"); }
+  catch (e) { return []; }
+}
+function renderBoardForm() {
+  var list = getBoard();
+  var ul = $("boardList");
+  ul.innerHTML = "";
+  var i;
+  for (i = 0; i < list.length; i++) {
+    var li = document.createElement("li");
+    li.textContent = (i + 1) + ". " + list[i].name + " — " + list[i].score + " voters";
+    ul.appendChild(li);
+  }
+  if (!list.length) ul.innerHTML = "<li>No scores yet. Be the first!</li>";
+  var qualifies = pendingScore > 0 &&
+    (list.length < 5 || pendingScore > list[list.length - 1].score);
+  $("nameRow").classList.toggle("hidden", !qualifies);
+  $("nameInput").value = "";
+}
+$("saveScore").addEventListener("click", function () {
+  var name = ($("nameInput").value || "Player").trim().slice(0, 12) || "Player";
+  var list = getBoard();
+  list.push({ name: name, score: pendingScore });
+  list.sort(function (a, b) { return b.score - a.score; });
+  list = list.slice(0, 5);
+  try { localStorage.setItem(BOARD_KEY, JSON.stringify(list)); } catch (e) {}
+  renderBoardForm();
+});
+
+/* ---------- Input ---------- */
+function canvasPos(e) {
+  var r = canvas.getBoundingClientRect();
+  var cx = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX);
+  var cy = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY);
+  return { x: (cx - r.left) * (W / r.width), y: (cy - r.top) * (H / r.height) };
+}
+function bindPointer() {
+  canvas.addEventListener("pointerdown", function (e) {
+    pointer.down = true;
+    var p = canvasPos(e); pointer.x = p.x; pointer.y = p.y;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener("pointermove", function (e) {
+    if (!pointer.down) return;
+    var p = canvasPos(e); pointer.x = p.x; pointer.y = p.y;
+  });
+  var up = function () { pointer.down = false; };
+  canvas.addEventListener("pointerup", up);
+  canvas.addEventListener("pointercancel", up);
+}
+document.addEventListener("keydown", function (e) {
+  var k = e.key;
+  if (k === "ArrowUp" || k === "ArrowDown" || k === "ArrowLeft" || k === "ArrowRight" || k === " ") {
+    e.preventDefault();
+  }
+  keys[k.length === 1 ? k.toLowerCase() : k] = true;
+});
+document.addEventListener("keyup", function (e) {
+  var k = e.key;
+  keys[k.length === 1 ? k.toLowerCase() : k] = false;
+});
+
+/* ---------- Boot ---------- */
+canvas = $("game");
+ctx = canvas.getContext("2d");
+/* crisp on hidpi: fixed logical size, CSS scales it */
+bindPointer();
+resetGame();
+draw();
+$("startBtn").addEventListener("click", startGame);
+$("againBtn").addEventListener("click", startGame);
+</script>
+</body>
+</html>
