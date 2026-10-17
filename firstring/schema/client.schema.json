@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FirstRing client (20-minute intake)",
+  "description": "One file per shop. Everything the agent knows and every routing decision comes from here. No secrets: credentials live in environment variables.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "tier", "timezone", "phone", "hours", "booking", "services", "escalation", "google", "retention_days", "recording", "minutes_cap"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z0-9-]{3,32}$", "description": "Used in URLs and the Vapi assistant name (firstring-<id>)." },
+    "name": { "type": "string", "minLength": 2, "maxLength": 60 },
+    "address": { "type": "string" },
+    "tier": { "enum": ["essential", "pro", "complete"] },
+    "timezone": { "type": "string", "default": "America/Toronto" },
+    "phone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["twilio_number", "owner_mobile"],
+      "properties": {
+        "twilio_number": { "$ref": "#/$defs/e164", "description": "FirstRing number the shop's line forwards to (imported into Vapi)." },
+        "owner_mobile": { "$ref": "#/$defs/e164", "description": "Gets alerts, summaries and approval requests; approvals are accepted only from this number." },
+        "shop_numbers": { "type": "array", "items": { "$ref": "#/$defs/e164" }, "description": "The shop's public line(s). Never texted (forwarding can show them as caller ID)." }
+      }
+    },
+    "hours": {
+      "type": "object",
+      "additionalProperties": false,
+      "propertyNames": { "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] },
+      "additionalProperties": { "type": "array", "items": { "type": "array", "prefixItems": [{ "$ref": "#/$defs/hhmm" }, { "$ref": "#/$defs/hhmm" }], "minItems": 2, "maxItems": 2 } }
+    },
+    "closed_dates": { "type": "array", "items": { "type": "string", "format": "date" } },
+    "service_area": { "type": "array", "items": { "type": "string" } },
+    "booking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slot_minutes", "min_notice_minutes", "max_jobs_per_day", "horizon_days", "shadow_mode"],
+      "properties": {
+        "slot_minutes": { "type": "integer", "enum": [15, 30, 60] },
+        "min_notice_minutes": { "type": "integer", "minimum": 0, "maximum": 2880 },
+        "max_jobs_per_day": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "horizon_days": { "type": "integer", "minimum": 1, "maximum": 60 },
+        "shadow_mode": { "type": "boolean", "description": "First 2 weeks: bookings are tentative holds until the owner texts YES." }
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "name", "duration_min", "price"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z0-9_]{2,32}$" },
+          "name": { "type": "string" },
+          "duration_min": { "type": "integer", "minimum": 10, "maximum": 600 },
+          "price": { "type": "string", "description": "Exactly what the agent may say, e.g. \"$89.99\" or \"from $60\"." },
+          "price_note": { "type": "string" },
+          "mobile": { "type": "boolean", "default": false },
+          "buffer_min": { "type": "integer", "minimum": 0, "maximum": 180, "description": "Travel time before and after (mobile jobs)." }
+        }
+      }
+    },
+    "faqs": { "type": "array", "maxItems": 25, "items": { "type": "object", "additionalProperties": false, "required": ["q", "a"], "properties": { "q": { "type": "string" }, "a": { "type": "string" } } } },
+    "policies": { "type": "object", "additionalProperties": { "type": "string" } },
+    "escalation": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "Topics always sent to the owner, never handled by the agent." },
+    "google": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calendar_id", "sheet_id"],
+      "properties": { "calendar_id": { "type": "string" }, "sheet_id": { "type": "string" } }
+    },
+    "retention_days": { "type": "integer", "minimum": 7, "maximum": 365 },
+    "recording": { "type": "boolean" },
+    "minutes_cap": { "type": "integer", "minimum": 0, "description": "Included minutes/month. Nion is alerted at 80% and 100%. 0 = no cap." },
+    "summary_hour": { "type": "integer", "minimum": 0, "maximum": 23, "default": 18 },
+    "voice": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "provider": { "type": "string" }, "voice_id": { "type": "string" } }
+    }
+  },
+  "$defs": {
+    "e164": { "type": "string", "pattern": "^\\+1[2-9][0-9]{9}$" },
+    "hhmm": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$|^24:00$" }
+  }
+}

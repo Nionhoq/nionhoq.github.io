@@ -1,0 +1,11 @@
+{
+  "name": "voice-edge",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "node --experimental-strip-types --no-warnings test/worker.harness.mjs"
+  },
+  "dependencies": { "postgres": "3.4.5" },
+  "devDependencies": { "typescript": "5.6.3", "@cloudflare/workers-types": "4.20241022.0" }
+}

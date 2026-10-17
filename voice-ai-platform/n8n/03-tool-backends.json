@@ -1,0 +1,535 @@
+{
+  "name": "Voice \u00b7 03 Tool backends (sync, 1s SoR budget)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi-tools",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "aa96b9ca-bb59-534c-92e7-73582859b379",
+      "name": "VAPI tools (from edge)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "3e04358d-d27a-56a3-b252-e93485cfd887"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verify the edge worker's HMAC so n8n never trusts the public internet.\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto. Signing key from env (or an n8n credential).\nconst crypto = require('crypto');\nconst key = $env.EDGE_N8N_SIGNING_KEY;\nconst out = [];\nfor (let i = 0; i < $input.all().length; i++) {\n  const item = $input.all()[i];\n  const h = item.json.headers || {};\n  const ts = Number(h['x-edge-timestamp'] || 0);\n  // Webhook option rawBody=true exposes exact bytes; fall back to re-serialising the\n  // parsed JSON (byte-identical when the sender used JSON.stringify, as the edge does).\n  let raw;\n  try { raw = (await this.helpers.getBinaryDataBuffer(i, 'data')).toString('utf8'); }\n  catch { raw = JSON.stringify(item.json.body); }\n  const expected = crypto.createHmac('sha256', key).update(`${ts}.${raw}`).digest('hex');\n  const given = Buffer.from(String(h['x-edge-signature'] || ''), 'utf8');\n  const fresh = Math.abs(Date.now() / 1000 - ts) <= 300;\n  const valid = fresh && given.length === expected.length &&\n                crypto.timingSafeEqual(given, Buffer.from(expected, 'utf8'));\n  out.push({ json: { valid, requestId: h['x-request-id'] || null, ...item.json.body } });\n}\nreturn out;"
+      },
+      "id": "e7c6ea6a-06b6-5928-b6a4-f35b8633c128",
+      "name": "Verify edge signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ef3a37f7-a714-5a2e-b477-7b2e46216dcd",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "15fd06bc-837c-51be-8fbc-bdd85e84b922",
+      "name": "Signature valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\":\"invalid signature\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "b0d94b0f-272f-5639-a4bf-54e72268655d",
+      "name": "Reject 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "f60250dd-b505-5e7f-9a6f-161badeaf5f4",
+                    "leftValue": "={{ $json.tool }}",
+                    "rightValue": "verify_identity",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "verify_identity"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "2cd5726c-a6d7-5741-affe-954ad0714aa9",
+                    "leftValue": "={{ $json.tool }}",
+                    "rightValue": "check_availability",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "check_availability"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "37c3408d-39d6-56e9-8057-f1ce16731011",
+                    "leftValue": "={{ $json.tool }}",
+                    "rightValue": "book_appointment",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "book_appointment"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "38142936-4db2-52a2-a030-2493445db3ec",
+                    "leftValue": "={{ $json.tool }}",
+                    "rightValue": "log_callback_request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "log_callback_request"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "e0a27e7b-4cee-5603-9c8c-b2439e8a471c",
+      "name": "Route by tool",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        660,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SOR_BASE_URL }}/identity/verify",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.toolCallId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, caller: $json.caller, args: $json.args }) }}",
+        "options": {
+          "timeout": 1000
+        }
+      },
+      "id": "d53cb2ed-d5fc-5e1a-a0cd-7525f1ee8d66",
+      "name": "SoR: verify identity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        80
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_SOR_CREDENTIAL_ID",
+          "name": "System of record API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SOR_BASE_URL }}/schedule/availability",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.toolCallId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, caller: $json.caller, args: $json.args }) }}",
+        "options": {
+          "timeout": 1000
+        }
+      },
+      "id": "dc978963-f7c8-54d9-911f-bc47c4f78a3b",
+      "name": "SoR: availability",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_SOR_CREDENTIAL_ID",
+          "name": "System of record API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SOR_BASE_URL }}/schedule/book",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.toolCallId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, caller: $json.caller, args: $json.args }) }}",
+        "options": {
+          "timeout": 1000
+        }
+      },
+      "id": "09cd74e6-7eda-5b8d-aa3f-1fe2800fbd2e",
+      "name": "SoR: book",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        360
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_SOR_CREDENTIAL_ID",
+          "name": "System of record API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SOR_BASE_URL }}/tasks/callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.toolCallId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, caller: $json.caller, args: $json.args }) }}",
+        "options": {
+          "timeout": 1000
+        }
+      },
+      "id": "3d77de21-a331-5d62-bb3c-f09bd4895c43",
+      "name": "SoR: callback task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_SOR_CREDENTIAL_ID",
+          "name": "System of record API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contract with the edge: return { result: \"<speakable string>\" }.\n// verify_identity MUST start with VERIFIED or NOT_VERIFIED; the edge rewrites the wording\n// and records the outcome in call_state, so this workflow never decides access itself.\nconst tool = $('Signature valid?').item.json.tool;\nconst r = $json;\nlet result;\nif (r.error) {\n  // SoR failed/timed out: never let a failure read as \"no slots\" or \"not verified\".\n  return [{ json: { result: \"I'm having trouble reaching our system right now. I can transfer you to a team member.\" } }];\n}\nswitch (tool) {\n  case 'verify_identity':\n    result = r.match === true ? 'VERIFIED' : 'NOT_VERIFIED';\n    break;\n  case 'check_availability': {\n    const slots = (r.slots || []).slice(0, 3);\n    result = slots.length\n      ? 'I have ' + slots.map(s => `${s.spoken} (slot ${s.id})`).join(', or ') + '. Which works best?'\n      : \"I don't see anything open then. Would a different day work?\";\n    break;\n  }\n  case 'book_appointment':\n    result = r.confirmed ? `You're booked for ${r.spoken}. You'll get a text confirmation.` : \"That slot was just taken. Want me to check other times?\";\n    break;\n  case 'log_callback_request':\n    result = 'Got it. Someone from our team will call you back.';\n    break;\n  default:\n    result = \"I can't help with that one, but I can transfer you.\";\n}\nreturn [{ json: { result: result.slice(0, 500) } }];"
+      },
+      "id": "7c9615c3-a290-5326-af60-79a12c860e6f",
+      "name": "Format speakable result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "06295b7a-8489-55df-ae34-d06d3e5af443",
+      "name": "Respond to edge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1360,
+        280
+      ]
+    }
+  ],
+  "connections": {
+    "VAPI tools (from edge)": {
+      "main": [
+        [
+          {
+            "node": "Verify edge signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify edge signature": {
+      "main": [
+        [
+          {
+            "node": "Signature valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signature valid?": {
+      "main": [
+        [
+          {
+            "node": "Route by tool",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by tool": {
+      "main": [
+        [
+          {
+            "node": "SoR: verify identity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SoR: availability",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SoR: book",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SoR: callback task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format speakable result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SoR: verify identity": {
+      "main": [
+        [
+          {
+            "node": "Format speakable result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SoR: availability": {
+      "main": [
+        [
+          {
+            "node": "Format speakable result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SoR: book": {
+      "main": [
+        [
+          {
+            "node": "Format speakable result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SoR: callback task": {
+      "main": [
+        [
+          {
+            "node": "Format speakable result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format speakable result": {
+      "main": [
+        [
+          {
+            "node": "Respond to edge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "errorWorkflow": "REPLACE_ERROR_WORKFLOW_ID",
+    "timezone": "UTC"
+  },
+  "pinData": {},
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "System-of-record calls for VAPI tools, forwarded by the edge. No retries here: the edge retries on the secondary n8n inside a 2.5s budget, so the SoR MUST honour Idempotency-Key (= VAPI toolCallId) or writes like book_appointment can double-apply."
+  },
+  "tags": [
+    {
+      "name": "voice-ai"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+# Real client configs and provisioning state never go in this (public) repo.
+clients/*
+!clients/example-autoshop.json
+*.state.json
+.env

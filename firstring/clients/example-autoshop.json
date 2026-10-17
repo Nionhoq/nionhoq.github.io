@@ -1,0 +1,45 @@
+{
+  "$schema": "../schema/client.schema.json",
+  "id": "maple-auto",
+  "name": "Maple Auto Care",
+  "address": "123 Example Rd, Mississauga, ON",
+  "tier": "pro",
+  "timezone": "America/Toronto",
+  "phone": {
+    "twilio_number": "+16475550100",
+    "owner_mobile": "+14165550111",
+    "shop_numbers": ["+19055550122"]
+  },
+  "hours": {
+    "mon": [["08:00", "18:00"]],
+    "tue": [["08:00", "18:00"]],
+    "wed": [["08:00", "18:00"]],
+    "thu": [["08:00", "18:00"]],
+    "fri": [["08:00", "18:00"]],
+    "sat": [["09:00", "14:00"]]
+  },
+  "closed_dates": ["2026-12-25", "2026-12-26", "2027-01-01"],
+  "service_area": ["Mississauga", "Brampton", "Oakville", "Etobicoke"],
+  "booking": { "slot_minutes": 30, "min_notice_minutes": 120, "max_jobs_per_day": 8, "horizon_days": 14, "shadow_mode": true },
+  "services": [
+    { "key": "oil_change", "name": "Oil change", "duration_min": 45, "price": "$89.99", "price_note": "synthetic blend, up to 5 litres" },
+    { "key": "tire_swap", "name": "Tire swap", "duration_min": 60, "price": "$79", "price_note": "seasonal swap on rims" },
+    { "key": "mobile_tire_swap", "name": "Mobile tire swap", "duration_min": 60, "price": "$129", "mobile": true, "buffer_min": 30 },
+    { "key": "brake_inspection", "name": "Brake inspection", "duration_min": 30, "price": "free with any service, otherwise $49" }
+  ],
+  "faqs": [
+    { "q": "Do you take walk-ins?", "a": "Yes for oil changes when there's a free bay, but booking is faster." },
+    { "q": "Do you store tires?", "a": "Yes, $80 per season for a set of four." }
+  ],
+  "policies": {
+    "cancellation": "Free cancellation up to 2 hours before the appointment.",
+    "deposits": "No deposit needed.",
+    "warranty": "12 months / 20,000 km on parts and labour."
+  },
+  "escalation": ["complaints about previous work", "damage claims", "price disputes", "warranty claims"],
+  "google": { "calendar_id": "REPLACE@group.calendar.google.com", "sheet_id": "REPLACE_SHEET_ID" },
+  "retention_days": 90,
+  "recording": true,
+  "minutes_cap": 500,
+  "summary_hour": 18
+}
