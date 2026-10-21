@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>An AI Agent That Reads the 856 Before a Human Does | Nion Hoq</title>
+<meta name="description" content="The advance ship notice arrives hours before the truck. An AI agent can check it against the purchase order the minute it lands, and flag the mismatch while the fix is still cheap." />
+<meta name="author" content="Nion Hoq" />
+<link rel="canonical" href="https://nionhoq.github.io/blog/agent-reads-856.html" />
+<meta property="og:title" content="An AI Agent That Reads the 856 Before a Human Does | Nion Hoq" />
+<meta property="og:description" content="The advance ship notice arrives hours before the truck. An AI agent can check it against the purchase order the minute it lands, and flag the mismatch while the fix is still cheap." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nionhoq.github.io/blog/agent-reads-856.html" />
+<meta property="og:image" content="https://nionhoq.github.io/assets/agent-reads-856.jpg" />
+<meta property="article:published_time" content="2026-10-21" />
+<meta property="article:author" content="Nion Hoq" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../styles.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "An AI Agent That Reads the 856 Before a Human Does",
+  "description": "The advance ship notice arrives hours before the truck. An AI agent can check it against the purchase order the minute it lands, and flag the mismatch while the fix is still cheap.",
+  "image": "https://nionhoq.github.io/assets/agent-reads-856.jpg",
+  "datePublished": "2026-10-21",
+  "author": {"@type": "Person", "name": "Nion Hoq", "url": "https://nionhoq.github.io/"},
+  "mainEntityOfPage": "https://nionhoq.github.io/blog/agent-reads-856.html"
+}
+</script>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="../index.html"><span class="mark">N</span>Nion Hoq</a>
+      <div class="nav-links" id="navLinks" style="display:flex">
+        <a href="../index.html#blog" class="back-link">← All posts</a>
+        <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+      </div>
+    </nav>
+  </div>
+</header>
+<main>
+  <article>
+    <div class="post-head">
+      <span class="pill"><span class="ping"></span>EDI · AI</span>
+      <h1>An AI Agent That Reads the 856 Before a Human Does</h1>
+      <p class="post-byline">By Nion Hoq · Oct 21, 2026 · 3 min read</p>
+    </div>
+    <div class="post-body">
+      <p><img src="../assets/agent-reads-856.jpg" alt="Illustration of a digital advance ship notice being scanned above barcoded cartons at a warehouse dock at night" style="width:100%;border-radius:12px" /></p>
+      <p>The advance ship notice lands at 2:14 in the morning.</p>
+      <p>Nobody reads it. The warehouse crew meets the truck at the dock at seven. The analyst opens the ASN when something is already wrong. The retailer reads it three weeks later, when the chargeback goes out for cartons that never matched the order.</p>
+      <p>The delay is the problem. The 856 arrives early. People read it late.</p>
+      <p>Look at what the document holds. Shipment level: carrier, ship date, weight. Order level: the purchase order it answers. Pack level: every carton, its SSCC barcode, the items and quantities inside. The 856 is a full claim about what is on the truck, filed before the truck arrives.</p>
+      <p>An agent can check that claim the minute the file lands.</p>
+      <p>It parses the 856 and lines it up against the 850 it answers. Ordered ten cases, shipped eight. A wrong item number in the third carton. A ship date that misses the retailer's window. A carton count that breaks the pack structure the routing guide requires. Every check is dull. Every miss on that list becomes a deduction later.</p>
+      <p>None of this needs a new platform. The files already move through a VAN or an AS2 connection. The agent sits where the analyst's inbox used to sit, between the translator and the ERP, reading what was always arriving unread.</p>
+      <p>For each failure, the agent drafts the 824, the application advice that reports the error back to the sender. At the start it sends nothing on its own. It queues the draft with the evidence attached: the segment, the value, the rule that broke. The analyst approves or edits. Those approvals teach the agent what the retailer enforces in practice, which is never quite what the printed guide says.</p>
+      <p>Some calls stay with people. A short shipment the buyer approved on the phone. A substitute the distribution centre accepts every time and rejects on paper. The agent's work there is smaller. It attaches the context, flags the history, and hands the case to a person while the truck is still at the origin dock and the fix is still cheap.</p>
+      <p>The gain is timing. A mismatch found at 2:14 in the morning is an email and a corrected carton. The same mismatch found at receiving is a refused load, or a silent deduction pulled from the next payment.</p>
+      <p>Building this inside a real operation is forward deployed work. You sit with the analysts who eat the chargebacks. You learn which rules are real, which retailers bluff, and which errors repeat every Monday. None of that lives in the implementation guide. The guide tells you what the segments are. The floor tells you which ones matter.</p>
+      <p>The analyst keeps the job. It stops being document triage. The agent reads everything, the second it lands, and only the exceptions reach a human.</p>
+      <p>That is a better morning.</p>
+    </div>
+    <div class="wrap">
+      <div class="post-cta">
+        <h3>Working on something like this?</h3>
+        <p>I build EDI and AI automation for supply chain teams. If your analysts are reading documents a machine should read first, we should talk.</p>
+        <a href="../index.html#contact" class="btn btn-primary">Work with me →</a>
+      </div>
+    </div>
+  </article>
+</main>
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <span>© <span id="year"></span> Nion Hoq</span>
+    <span>EDI &amp; Supply-Chain Integration · Founder of BrenneBeau · Consultant</span>
+  </div>
+</footer>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+<script data-goatcounter="https://nionhoq.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
