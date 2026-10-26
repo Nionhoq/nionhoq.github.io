@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>social-knowledge-base — a Searchable Knowledge Base From Creator Videos | Nion Hoq</title>
+<meta name="description" content="social-knowledge-base turns all of a creator's videos into markdown notes you can search: download, transcription, notes, and a topic overview. Free, MIT." />
+<meta name="author" content="Nion Hoq" />
+<link rel="canonical" href="https://nionhoq.github.io/blog/tool-note-social-knowledge-base.html" />
+<meta property="og:title" content="social-knowledge-base — a Searchable Knowledge Base From Creator Videos | Nion Hoq" />
+<meta property="og:description" content="social-knowledge-base turns all of a creator's videos into markdown notes you can search: download, transcription, notes, and a topic overview. Free, MIT." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nionhoq.github.io/blog/tool-note-social-knowledge-base.html" />
+<meta property="article:published_time" content="2026-10-26" />
+<meta property="article:author" content="Nion Hoq" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../styles.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "social-knowledge-base — a Searchable Knowledge Base From Creator Videos",
+  "description": "social-knowledge-base turns all of a creator's videos into markdown notes you can search: download, transcription, notes, and a topic overview. Free, MIT.",
+  "datePublished": "2026-10-26",
+  "author": {"@type": "Person", "name": "Nion Hoq", "url": "https://nionhoq.github.io/"},
+  "mainEntityOfPage": "https://nionhoq.github.io/blog/tool-note-social-knowledge-base.html"
+}
+</script>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="../index.html"><span class="mark">N</span>Nion Hoq</a>
+      <div class="nav-links" id="navLinks" style="display:flex">
+        <a href="../index.html#blog" class="back-link">← All posts</a>
+        <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+      </div>
+    </nav>
+  </div>
+</header>
+<main>
+  <article>
+    <div class="post-head">
+      <span class="pill"><span class="ping"></span>AI Tool Watch</span>
+      <h1>social-knowledge-base — a Searchable Knowledge Base From Creator Videos</h1>
+      <p class="post-byline">By Nion Hoq · Oct 26, 2026 · 1 min read</p>
+    </div>
+    <div class="post-body">
+      <p>social-knowledge-base turns all of a creator's videos into a knowledge base you can search. It works on Instagram today. TikTok and YouTube support are still in progress, according to the repo.</p>
+      <p>It runs in four steps. First it downloads the account's videos. Then it transcribes them in bulk with faster-whisper. Next it writes one markdown note per video, using the transcript plus frames and OCR. Last, it builds an OVERVIEW file that groups the notes by topic, and query.py lets you search the set.</p>
+      <p>The job is resumable. If a run stops partway, the manifest records what is done, so you do not start over.</p>
+      <p>The verdict in my tracker is validated by repo design. That is the stamp I logged, and I am keeping it at that level. The repo is public and the README matches the design, step by step.</p>
+      <p>Cost: free. The code is open source under the MIT licence, and transcription runs on your own machine. A GPU is recommended at scale, and the notes step uses your own LLM, so that usage is on you.</p>
+      <p>For me, this is the pattern behind my youtube-watch idea: build notes from a creator I learn from once, then ask questions across all of their videos instead of rewatching them one by one.</p>
+      <p>Link: <a href="https://github.com/guimatheus92/social-knowledge-base">github.com/guimatheus92/social-knowledge-base</a></p>
+    </div>
+    <div class="wrap">
+      <div class="post-cta">
+        <h3>Let's talk</h3>
+        <p>I do this work: EDI, supply-chain integration, and AI-assisted automation for operations that can't afford downtime.</p>
+        <a href="../index.html#contact" class="btn btn-primary">Get in touch →</a>
+      </div>
+    </div>
+  </article>
+</main>
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <span>© <span id="year"></span> Nion Hoq</span>
+    <span>EDI &amp; Supply-Chain Integration · Founder of BrenneBeau · Consultant</span>
+  </div>
+</footer>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+<script data-goatcounter="https://nionhoq.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
