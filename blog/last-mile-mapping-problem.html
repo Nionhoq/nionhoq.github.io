@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Last Mile of AI in Supply Chain Is a Mapping Problem | Nion Hoq</title>
+<meta name="description" content="AI models read EDI files fine. The hard part is the dialect every trading partner pair negotiates over years, and the business rules buried in the map. That last mile is still human work." />
+<meta name="author" content="Nion Hoq" />
+<link rel="canonical" href="https://nionhoq.github.io/blog/last-mile-mapping-problem.html" />
+<meta property="og:title" content="The Last Mile of AI in Supply Chain Is a Mapping Problem | Nion Hoq" />
+<meta property="og:description" content="AI models read EDI files fine. The hard part is the dialect every trading partner pair negotiates over years, and the business rules buried in the map. That last mile is still human work." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nionhoq.github.io/blog/last-mile-mapping-problem.html" />
+<meta property="og:image" content="https://nionhoq.github.io/assets/last-mile-mapping.jpg" />
+<meta property="article:published_time" content="2026-10-27" />
+<meta property="article:author" content="Nion Hoq" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../styles.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "The Last Mile of AI in Supply Chain Is a Mapping Problem",
+  "description": "AI models read EDI files fine. The hard part is the dialect every trading partner pair negotiates over years, and the business rules buried in the map. That last mile is still human work.",
+  "image": "https://nionhoq.github.io/assets/last-mile-mapping.jpg",
+  "datePublished": "2026-10-27",
+  "author": {"@type": "Person", "name": "Nion Hoq", "url": "https://nionhoq.github.io/"},
+  "mainEntityOfPage": "https://nionhoq.github.io/blog/last-mile-mapping-problem.html"
+}
+</script>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="../index.html"><span class="mark">N</span>Nion Hoq</a>
+      <div class="nav-links" id="navLinks" style="display:flex">
+        <a href="../index.html#blog" class="back-link">← All posts</a>
+        <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+      </div>
+    </nav>
+  </div>
+</header>
+<main>
+  <article>
+    <div class="post-head">
+      <span class="pill"><span class="ping"></span>EDI · AI</span>
+      <h1>The Last Mile of AI in Supply Chain Is a Mapping Problem</h1>
+      <p class="post-byline">By Nion Hoq · Oct 27, 2026 · 3 min read</p>
+    </div>
+    <div class="post-body">
+      <p><img src="../assets/last-mile-mapping.jpg" alt="Illustration of a bridge of data cells being built between a glowing AI model and a warehouse" style="width:100%;border-radius:12px" /></p>
+      <p>Every AI demo in supply chain runs on clean data.</p>
+      <p>A tidy spreadsheet. A well-formed order file. Fields that mean what their names say. Then the demo ends, and someone points the model at a real retailer's 850.</p>
+      <p>The trouble starts immediately. EDI is a set of agreements wearing a file format.</p>
+      <p>The standard gives you segments and elements. After that, every trading partner pair negotiates its own dialect. This retailer puts the buyer's item number in a REF segment, a choice somebody made in 2009 and never documented. That one sends quantities in eaches on the 850 and cases on the 856. Ship-to codes in the file match no location in anyone's master data, and everyone in the building knows which dock they mean.</p>
+      <p>None of this is in the implementation guide. The guide covers the standard. The dialect lives in old mapping specs, email threads, and the memory of whoever survived the last onboarding.</p>
+      <p>This is the last mile. The model can read the file. Reading was never the hard part.</p>
+      <p>The hard part is knowing what correct looks like for this partner. When the 850 and the item master disagree, which one wins. How much quantity tolerance this retailer allows before the ASN draws a chargeback. Whether the ship notice goes out when the label prints or when the truck leaves. Those answers are business decisions. They live in the map.</p>
+      <p>A map is a pile of small decisions written down as transformations. Change this code to that one. Take the date from this segment, in this format. If the pack size is missing, use the eaches and flag it. Every EDI analyst has written thousands of these. The map is where the business rules actually live, long after the meetings that made them are forgotten.</p>
+      <p>AI changes the economics of that work. It does not erase it.</p>
+      <p>A model can draft a map from a spec and a sample file in minutes. It can propose the transformations, spot the fields that match nothing, and flag the values that break the pattern of the last thousand files. What took a week of staring takes an afternoon of review.</p>
+      <p>Review is the key word. The model proposes. A person who knows the partner decides. Put the model in charge of correctness and it will happily map the buyer's item number from the wrong segment for ten thousand orders, fluently and at scale.</p>
+      <p>That deciding seat is forward deployed work. You sit between the model and the mapping table, inside the operation, learning the dialect from the people who get the chargebacks. You turn business intent into schemas, validations, and prompts, and you stay close enough to catch the model being confidently wrong.</p>
+      <p>The model is the engine. The map is still the road.</p>
+      <p>Nobody ships freight on an engine alone.</p>
+    </div>
+    <div class="wrap">
+      <div class="post-cta">
+        <h3>Working on something like this?</h3>
+        <p>I build EDI and AI automation for supply chain teams. If your analysts are reading documents a machine should read first, we should talk.</p>
+        <a href="../index.html#contact" class="btn btn-primary">Work with me →</a>
+      </div>
+    </div>
+  </article>
+</main>
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <span>© <span id="year"></span> Nion Hoq</span>
+    <span>EDI &amp; Supply-Chain Integration · Founder of BrenneBeau · Consultant</span>
+  </div>
+</footer>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+<script data-goatcounter="https://nionhoq.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
