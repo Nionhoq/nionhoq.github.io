@@ -1,369 +1,489 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nion Hoq — EDI & Supply Chain Integration | Founder & Consultant</title>
-<meta name="description" content="Nion (Ehteshum-ul) Hoq, M.Eng PMP — EDI / ERP integration specialist, supply chain technologist, founder of BrenneBeau, and consultant. 10+ years in IT, 7+ in EDI/ERP integration." />
-<meta name="author" content="Nion Hoq" />
-<meta property="og:title" content="Nion Hoq — EDI & Supply Chain Integration | Founder & Consultant" />
-<meta property="og:description" content="10+ years in IT, 7+ in EDI/ERP integration. SAP S/4HANA, AS2, SQL, AWS. Founder of BrenneBeau." />
-<meta property="og:type" content="website" />
-<meta property="og:image" content="assets/portrait.jpeg" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script>
+(function(){
+  const key = 'nh-theme';
+  const stored = localStorage.getItem(key);
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = stored || (prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
+<style>
+:root {
+  --base: #f8f6f1;
+  --ink: #17203a;
+  --muted: #5b6572;
+  --accent: #0e7c86;
+  --card: #ffffff;
+  --hairline: #e6e0d4;
+  --veil: rgba(248, 246, 241, 0.86);
+  --blob1: rgba(45, 212, 191, 0.28);
+  --blob2: rgba(167, 139, 250, 0.22);
+  --blob3: rgba(56, 189, 248, 0.24);
+  --blob4: rgba(251, 191, 36, 0.18);
+}
+[data-theme="dark"] {
+  --base: #0b1d33;
+  --ink: #eef4f8;
+  --muted: #9fb4c4;
+  --accent: #3ec6f0;
+  --card: #10283f;
+  --hairline: #1d3a54;
+  --veil: rgba(11, 29, 51, 0.86);
+  --blob1: rgba(62, 198, 240, 0.32);
+  --blob2: rgba(99, 102, 241, 0.26);
+  --blob3: rgba(45, 212, 191, 0.22);
+  --blob4: rgba(232, 121, 249, 0.16);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--base);
+  color: var(--ink);
+  line-height: 1.6;
+  min-height: 100vh;
+  position: relative;
+}
+.bg-layer, .bg-layer-2, .veil {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.bg-layer, .bg-layer-2 {
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 20%, var(--blob1), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 85% 25%, var(--blob2), transparent 65%),
+    radial-gradient(ellipse 60% 70% at 25% 80%, var(--blob3), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 75% 70%, var(--blob4), transparent 55%);
+  filter: blur(40px);
+  opacity: 0.85;
+  animation: drift 75s ease-in-out infinite alternate;
+}
+.bg-layer-2 {
+  opacity: 0;
+  animation: drift 82s ease-in-out infinite alternate-reverse, crossfade 36s ease-in-out infinite;
+}
+.veil {
+  background: var(--veil);
+  backdrop-filter: blur(0px);
+}
+@keyframes drift {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(3%, -2%) scale(1.04); }
+  100% { transform: translate(-2%, 3%) scale(0.97); }
+}
+@keyframes crossfade {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bg-layer, .bg-layer-2 { animation: none; opacity: 0.6; }
+  .bg-layer-2 { opacity: 0.3; }
+}
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: color-mix(in srgb, var(--base) 85%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--hairline);
+}
+.logo { font-family: "Space Grotesk", sans-serif; font-weight: 600; letter-spacing: 0.04em; }
+nav a { color: var(--muted); text-decoration: none; margin-left: 1.25rem; font-size: 0.9rem; }
+nav a:hover { color: var(--ink); }
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-left: 1rem;
+}
+.theme-toggle:hover { border-color: var(--accent); }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+section { padding: 4.5rem 0; }
+h1, h2, h3 { font-family: "Space Grotesk", sans-serif; font-weight: 600; line-height: 1.15; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); font-weight: 700; margin: 0.5rem 0 1rem; }
+h2 { font-size: 2rem; margin-bottom: 0.75rem; }
+.sub { color: var(--muted); max-width: 38rem; margin-bottom: 2rem; }
+.pill {
+  display: inline-block;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  margin-bottom: 1rem;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  padding: 0.7rem 1.2rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-right: 0.75rem;
+  margin-top: 0.5rem;
+}
+.btn.secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+}
+.hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: center;
+  min-height: 70vh;
+  padding-top: 3rem;
+}
+@media (min-width: 900px) {
+  .hero { grid-template-columns: 1.2fr 0.8fr; }
+}
+.portrait {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  display: block;
+  margin: 0 auto;
+}
+.marquee-wrap {
+  overflow: hidden;
+  margin: 1.5rem 0;
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.marquee {
+  display: flex;
+  gap: 2rem;
+  white-space: nowrap;
+  animation: marquee 28s linear infinite;
+  font-size: 0.85rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 2rem 0;
+}
+.stat {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  padding: 1.25rem;
+  border-radius: 10px;
+  text-align: center;
+}
+.stat strong { display: block; font-size: 1.6rem; color: var(--accent); font-family: "Space Grotesk", sans-serif; }
+.cards, .timeline { display: grid; gap: 1rem; }
+@media (min-width: 700px) {
+  .cards { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+}
+.card, .item {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  padding: 1.4rem;
+  border-radius: 10px;
+}
+.card h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
+.card p, .item p { color: var(--muted); font-size: 0.95rem; }
+.item .meta { color: var(--accent); font-size: 0.85rem; margin-bottom: 0.4rem; font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+.chip {
+  background: color-mix(in srgb, var(--accent) 8%, var(--card));
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  font-size: 0.8rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+}
+.feature {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 1rem 0;
+}
+.feature h2 { color: var(--accent); }
+footer {
+  border-top: 1px solid var(--hairline);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+footer a { color: var(--accent); text-decoration: none; }
+.about-photo{width:100%;max-width:360px;border-radius:18px;display:block;margin:1.25rem auto 1.5rem;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+</style>
 </head>
 <body>
+<div class="bg-layer"></div>
+<div class="bg-layer-2"></div>
+<div class="veil"></div>
 
-<!-- ===== NAV ===== -->
-<header id="top">
-  <div class="wrap">
-    <nav>
-      <a href="#top" class="brand"><span class="mark">N</span>Nion Hoq</a>
-      <div class="nav-links" id="navLinks">
-        <a href="#about">About</a>
-        <a href="#journey">Journey</a>
-        <a href="#expertise">Expertise</a>
-        <a href="#certs">Certs</a>
-        <a href="#projects">Work</a>
-        <a href="#founder">BrenneBeau</a>
-        <a href="#social">Social</a>
-        <a href="#blog">Blog</a>
-        <a href="#emerging-tech">Emerging Tech</a>
-        <a href="#tools">Tools</a>
-        <a href="https://jobs.nion-hoq.ca/">Tracker</a>
-        <a href="#contact" class="nav-cta">Get in touch</a>
-      </div>
-      <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
-    </nav>
+<nav>
+  <div class="logo">NION HOQ</div>
+  <div style="display:flex; align-items:center;">
+    <a href="#about">About</a>
+    <a href="#journey">Journey</a>
+    <a href="#expertise">Expertise</a>
+    <a href="#work">Work</a>
+    <a href="#blog">Blog</a>
+    <a href="#tools">Tools</a>
+    <button class="theme-toggle" aria-label="Toggle theme" id="themeToggle">☀</button>
   </div>
-</header>
+</nav>
 
-<!-- ===== HERO ===== -->
-<section class="hero">
-  <div class="wrap">
-    <div class="hero-grid">
-      <div>
-        <span class="pill"><span class="ping"></span>Open to consulting & senior roles</span>
-        <h1>I make <span class="green">supply chains</span> talk to each other.</h1>
-        <p class="lead">Nion Hoq, M.Eng — EDI & ERP integration specialist with 10+ years in IT and 7+ wiring retailers, suppliers and ERPs together across SAP, AS2 and the cloud. Founder of BrenneBeau, consultant, and the person teams call when the data has to flow.</p>
-        <div class="hero-cta">
-          <a href="#contact" class="btn btn-primary">Work with me →</a>
-          <a href="#projects" class="btn btn-ghost">See the work</a>
-        </div>
+<main class="container">
+  <section class="hero">
+    <div>
+      <div class="pill">Open to consulting & senior roles</div>
+      <h1>I make supply chains talk to each other.</h1>
+      <p>Nion Hoq, M.Eng — EDI & ERP integration specialist with 10+ years in IT and 7+ wiring retailers, suppliers and ERPs together across SAP, AS2 and the cloud. Founder of BrenneBeau, consultant, and the person teams call when the data has to flow.</p>
+      <div style="margin-top:1.5rem;">
+        <a href="#contact" class="btn">Let's connect</a>
+        <a href="#expertise" class="btn secondary">See how I work</a>
       </div>
-
-      <!-- PORTRAIT: image lives at assets/portrait.jpeg -->
-      <div class="portrait">
-        <img src="assets/portrait.jpeg" alt="Nion Hoq" onload="this.nextElementSibling.style.display='none'" onerror="this.style.display='none'" />
-        <div class="ph"><span class="big">N</span>Add your photo at<br><b class="mono">assets/portrait.jpeg</b></div>
-        <div class="cap"><b>Nion Hoq</b> · EDI & Supply-Chain Integration</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ticker -->
-  <div class="ticker">
-    <div class="ticker-track">
-      <span>SAP S/4HANA</span><span>AS2 / SFTP</span><span>ANSI X12</span><span>EDIFACT</span><span>IDOC</span><span>SQL / PL-SQL</span><span>AWS</span><span>ITIL v4</span><span>PMP</span>
-      <span>SAP S/4HANA</span><span>AS2 / SFTP</span><span>ANSI X12</span><span>EDIFACT</span><span>IDOC</span><span>SQL / PL-SQL</span><span>AWS</span><span>ITIL v4</span><span>PMP</span>
-    </div>
-  </div>
-</section>
-
-<!-- ===== ABOUT ===== -->
-<section id="about">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">01</span><h2>About</h2><div class="sub">Fluent in the technical detail of EDI and ERP — and in the supply-chain business that depends on it.</div></div>
-    <div class="about-grid">
-      <div class="about-text reveal">
-        <p>I sit at the intersection most companies struggle to staff: <strong>technical enough to own AS2 connectivity, X12/EDIFACT mapping and IDOC flows into SAP S/4HANA — and commercial enough to explain why any of it matters to the business.</strong></p>
-        <p>Over a decade I've moved from hands-on analyst to integration consultant leading Tier-2/3 support, training stakeholders, and authoring the C-level presentations that turn a technical incident into a clear decision.</p>
-        <p>Now I'm deepening the data side — <strong>SQL/PL-SQL and AWS</strong> — to take integration from "it transmits" to "it's observable, queryable and reliable." That EDI-to-SQL transition is the edge I bring to modern supply-chain teams.</p>
-        <div class="fact-row">
-          <div class="fact"><div class="n">10+</div><div class="l">years in IT</div></div>
-          <div class="fact"><div class="n">7+</div><div class="l">years EDI/ERP</div></div>
-          <div class="fact"><div class="n">4+</div><div class="l">certifications</div></div>
+      <div class="marquee-wrap">
+        <div class="marquee">
+          <span>SAP S/4HANA · AS2 / SFTP · ANSI X12 · EDIFACT · IDOC · SQL / PL-SQL · AWS · ITIL v4 · PMP · SAP S/4HANA · AS2 / SFTP · ANSI X12 · EDIFACT · IDOC · SQL / PL-SQL · AWS · ITIL v4 · PMP</span>
+          <span>SAP S/4HANA · AS2 / SFTP · ANSI X12 · EDIFACT · IDOC · SQL / PL-SQL · AWS · ITIL v4 · PMP · SAP S/4HANA · AS2 / SFTP · ANSI X12 · EDIFACT · IDOC · SQL / PL-SQL · AWS · ITIL v4 · PMP</span>
         </div>
       </div>
     </div>
-  </div>
-</section>
+    <img src="assets/portrait.jpeg" alt="Nion Hoq" class="portrait" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+    <div style="display:none; text-align:center; color:var(--muted); font-size:0.9rem;">Add your photo at assets/portrait.jpeg</div>
+  </section>
 
-<!-- ===== JOURNEY ===== -->
-<section id="journey" style="background:var(--bg-2)">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">02</span><h2>Journey</h2><div class="sub">A decade building integrations that businesses run on.</div></div>
+  <section id="about">
+    <h2>About</h2>
+    <div class="stats">
+      <div class="stat"><strong>10+</strong> years in IT</div>
+      <div class="stat"><strong>7+</strong> years EDI/ERP</div>
+      <div class="stat"><strong>4+</strong> certifications</div>
+    </div>
+    <img class="about-photo" src="assets/casual.jpg" alt="Nion Hoq" loading="lazy">
+    <p>Fluent in the technical detail of EDI and ERP — and in the supply-chain business that depends on it. I sit at the intersection most companies struggle to staff: technical enough to own AS2 connectivity, X12/EDIFACT mapping and IDOC flows into SAP S/4HANA — and commercial enough to explain why any of it matters to the business. Over a decade I've moved from hands-on analyst to integration consultant leading Tier-2/3 support, training stakeholders, and authoring the C-level presentations that turn a technical incident into a clear decision. Now I'm deepening the data side — SQL/PL-SQL and AWS — to take integration from "it transmits" to "it's observable, queryable and reliable." That EDI-to-SQL transition is the edge I bring to modern supply-chain teams.</p>
+  </section>
+
+  <section id="journey">
+    <h2>Journey</h2>
     <div class="timeline">
-      <div class="tl-item reveal"><div class="role">Senior Application & EDI Analyst</div><div class="org">CGI Canada</div><div class="when">Jul 2024 — Present</div><p>Lead EDI/ERP integration for enterprise retail clients, owning end-to-end AS2/SFTP onboarding across SAP S/4HANA and D365. Resolve 20+ monthly Tier-2/3 escalations while authoring C-level reporting that drives integration roadmap decisions.</p></div>
-      <div class="tl-item reveal"><div class="role">Integration Consultant & Client Support (Remote)</div><div class="org">Körber Supply Chain, USA</div><div class="when">Apr 2021 — Mar 2024</div><p>Led a Tier-2/3 support team delivering supply-chain integration for North American clients, cutting escalation resolution time and acting as primary technical escalation point. Owned client relationships from onboarding through steady-state, translating complex EDI requirements into reliable production workflows.</p></div>
-      <div class="tl-item reveal"><div class="role">Integration Analyst, EDI & Client Management</div><div class="org">CGI</div><div class="when">Feb 2019 — Apr 2021</div><p>Managed EDI integration and client delivery across ANSI X12 and EDIFACT standards, coordinating cross-functional teams under ITIL practices. Trained client stakeholders and standardized onboarding, reducing recurring partner setup errors.</p></div>
-      <div class="tl-item reveal"><div class="role">Application & EDI Analyst</div><div class="org">Edisoft Inc</div><div class="when">Nov 2017 — Feb 2019</div><p>Built and supported EDI integrations connecting retail trading partners to ERP systems via mapping tools and VANs. Diagnosed and resolved production transaction failures, ensuring uninterrupted order-to-cash flow for retail clients.</p></div>
+      <div class="item">
+        <h3>Senior Application & EDI Analyst, CGI Canada</h3>
+        <div class="meta">Jul 2024 — Present</div>
+        <p>Lead EDI/ERP integration for enterprise retail clients, owning end-to-end AS2/SFTP onboarding across SAP S/4HANA and D365. Resolve 20+ monthly Tier-2/3 escalations while authoring C-level reporting that drives integration roadmap decisions.</p>
+      </div>
+      <div class="item">
+        <h3>Integration Consultant & Client Support (Remote), Körber Supply Chain, USA</h3>
+        <div class="meta">Apr 2021 — Mar 2024</div>
+        <p>Led a Tier-2/3 support team delivering supply-chain integration for North American clients, cutting escalation resolution time and acting as primary technical escalation point. Owned client relationships from onboarding through steady-state, translating complex EDI requirements into reliable production workflows.</p>
+      </div>
+      <div class="item">
+        <h3>Integration Analyst, EDI & Client Management, CGI</h3>
+        <div class="meta">Feb 2019 — Apr 2021</div>
+        <p>Managed EDI integration and client delivery across ANSI X12 and EDIFACT standards, coordinating cross-functional teams under ITIL practices. Trained client stakeholders and standardized onboarding, reducing recurring partner setup errors.</p>
+      </div>
+      <div class="item">
+        <h3>Application & EDI Analyst, Edisoft Inc</h3>
+        <div class="meta">Nov 2017 — Feb 2019</div>
+        <p>Built and supported EDI integrations connecting retail trading partners to ERP systems via mapping tools and VANs. Diagnosed and resolved production transaction failures, ensuring uninterrupted order-to-cash flow for retail clients.</p>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ===== EXPERTISE (bento) ===== -->
-<section id="expertise">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">03</span><h2>Expertise</h2><div class="sub">Whether as an employee or a consultant, these are the problems I'm hired to solve.</div></div>
-    <div class="bento">
-      <div class="b wide reveal"><span class="num">01</span><span class="ic">🔗</span><h3>EDI & Trading-Partner Integration</h3><p>End-to-end onboarding and mapping across ANSI X12, EDIFACT, cXML and IDOC — with AS2, SFTP and FTPS connectivity that holds up in production, not just in test.</p></div>
-      <div class="b reveal"><span class="num">02</span><span class="ic">🏭</span><h3>ERP Integration</h3><p>Wiring EDI into SAP S/4HANA, Sage 300/X3, Dynamics D365 and AS400 so orders, ASNs and invoices flow without manual touch.</p></div>
-      <div class="b reveal"><span class="num">03</span><span class="ic">🧭</span><h3>Tier-2/3 Support</h3><p>Escalation management, root-cause analysis and the stakeholder comms that turn outages into resolved, documented incidents.</p></div>
-      <div class="b reveal"><span class="num">04</span><span class="ic">🗄️</span><h3>Data & SQL</h3><p>Growing PL/SQL and scripting to make integration data observable, queryable and auditable.</p></div>
-      <div class="b wide reveal"><span class="num">05</span><span class="ic">📊</span><h3>Delivery & Stakeholder Leadership</h3><p>PMP- and ITIL-grounded delivery: leading small teams, training stakeholders, and authoring the C-level presentations that drive decisions. AWS-certified, with cloud thinking applied to integration reliability and AI-assisted tooling.</p></div>
+  <section id="expertise">
+    <h2>Expertise</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>01 · EDI & Trading-Partner Integration</h3>
+        <p>End-to-end onboarding and mapping across ANSI X12, EDIFACT, cXML and IDOC — with AS2, SFTP and FTPS connectivity that holds up in production, not just in test.</p>
+      </div>
+      <div class="card">
+        <h3>02 · ERP Integration</h3>
+        <p>Wiring EDI into SAP S/4HANA, Sage 300/X3, Dynamics D365 and AS400 so orders, ASNs and invoices flow without manual touch.</p>
+      </div>
+      <div class="card">
+        <h3>03 · Tier-2/3 Support</h3>
+        <p>Escalation management, root-cause analysis and the stakeholder comms that turn outages into resolved, documented incidents.</p>
+      </div>
+      <div class="card">
+        <h3>04 · Data & SQL</h3>
+        <p>Growing PL/SQL and scripting to make integration data observable, queryable and auditable.</p>
+      </div>
+      <div class="card">
+        <h3>05 · Delivery & Stakeholder Leadership</h3>
+        <p>PMP- and ITIL-grounded delivery: leading small teams, training stakeholders, and authoring the C-level presentations that drive decisions. AWS-certified, with cloud thinking applied to integration reliability and AI-assisted tooling.</p>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ===== CERTS ===== -->
-<section id="certs" style="background:var(--bg-2)">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">04</span><h2>Certifications</h2><div class="sub">Credentials that back the work.</div></div>
-    <div class="grid2">
-      <div class="cert reveal"><div class="badge">AWS</div><div><h3>AWS Certified AI Practitioner</h3><span>Amazon Web Services · 2026</span></div></div>
-      <div class="cert reveal"><div class="badge">PMP</div><div><h3>Project Management Professional</h3><span>Project Management Institute (PMI)</span></div></div>
-      <div class="cert reveal"><div class="badge">AWS</div><div><h3>AWS Certified Cloud Practitioner</h3><span>Amazon Web Services</span></div></div>
-      <div class="cert reveal"><div class="badge">ITIL</div><div><h3>ITIL v4 Foundation (Intermediate)</h3><span>IT service management</span></div></div>
+  <section id="certifications">
+    <h2>Certifications</h2>
+    <div class="cards">
+      <div class="card"><h3>AWS Certified AI Practitioner</h3><p>Amazon Web Services · 2026</p></div>
+      <div class="card"><h3>Project Management Professional</h3><p>Project Management Institute (PMI)</p></div>
+      <div class="card"><h3>AWS Certified Cloud Practitioner</h3><p>Amazon Web Services</p></div>
+      <div class="card"><h3>ITIL v4 Foundation (Intermediate)</h3><p>IT service management</p></div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ===== SKILLS ===== -->
-<section id="skills">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">05</span><h2>Toolbox</h2><div class="sub">The technologies I reach for.</div></div>
-    <div class="grid2" style="gap:36px">
-      <div class="skill-group reveal"><h4>EDI & Integration</h4><div class="chips"><span class="chip">ANSI X12</span><span class="chip">EDIFACT</span><span class="chip">IDOC</span><span class="chip">cXML / XML</span><span class="chip">AS2</span><span class="chip">SFTP / FTPS</span><span class="chip">TrueCommerce</span><span class="chip">SPS Commerce</span><span class="chip">Cleo</span><span class="chip">IBM Sterling</span><span class="chip">OpenText VAN</span><span class="chip">Trusted Link</span><span class="chip">MapForce</span></div></div>
-      <div class="skill-group reveal"><h4>ERP & Platforms</h4><div class="chips"><span class="chip">SAP S/4HANA</span><span class="chip">Sage 300 / X3</span><span class="chip">Dynamics D365</span><span class="chip">AS400</span></div></div>
-      <div class="skill-group reveal"><h4>Data, Cloud & Scripting</h4><div class="chips"><span class="chip">SQL / PL-SQL</span><span class="chip">Shell / Bash</span><span class="chip">AWS EC2</span><span class="chip">Basic programming</span></div></div>
-      <div class="skill-group reveal"><h4>Delivery & Tooling</h4><div class="chips"><span class="chip">Jira</span><span class="chip">Confluence</span><span class="chip">ServiceNow</span><span class="chip">Monday.com</span><span class="chip">MS Project / Visio</span><span class="chip">ITIL v4</span><span class="chip">PMP</span></div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== PROJECTS ===== -->
-<section id="projects" style="background:var(--bg-2)">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">06</span><h2>Selected Work</h2><div class="sub">Representative outcomes from real engagements. <!-- EDIT: swap in specific client names, metrics or links once you're comfortable sharing them --></div></div>
-    <div class="bento">
-      <div class="b reveal"><span class="ic">📦</span><h3>Retail Partner Onboarding</h3><p>Stood up new ANSI X12 trading partners end to end — POs, ASNs, invoices — cutting manual handling and compliance chargebacks.</p></div>
-      <div class="b wide reveal"><span class="ic">🛠️</span><h3>Tier-2/3 Integration Lead</h3><p>Led a two-person escalation team at Körber, owning complex AS2/EDI/ERP incidents across a global client base with documented root-cause resolution.</p></div>
-      <div class="b wide reveal"><span class="ic">🔄</span><h3>EDI → SAP S/4HANA Flows</h3><p>Mapped and validated IDOC-based document flows into SAP S/4HANA, keeping order-to-cash moving without manual intervention.</p></div>
-      <div class="b reveal"><span class="ic">🧩</span><h3>Multi-VAN Connectivity</h3><p>Configured and troubleshot connectivity across OpenText VAN, IBM Sterling, SPS Commerce and Cleo.</p></div>
-      <div class="b reveal"><span class="ic">📈</span><h3>Escalation Program</h3><p>20+ monthly escalations at CGI, translated into business updates and C-level presentations.</p></div>
-      <div class="b wide reveal"><span class="ic">💡</span><h3>EDI-to-SQL Observability <span class="green" style="font-size:.8rem">(in progress)</span></h3><p>Building SQL/PL-SQL tooling to query and audit integration data — turning opaque transmission logs into evidence teams can act on.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== FOUNDER / BRENNEBEAU ===== -->
-<section id="founder">
-  <div class="wrap">
-    <div class="founder reveal">
-      <span class="sec-no">07</span>
-      <h2>BrenneBeau — I built & ran the supply chain, not just the integration</h2>
-      <p>I'm the founder and owner of <strong>BrenneBeau</strong> (<a href="https://brennebeau.com" target="_blank" rel="noopener" style="color:#04140a;text-decoration:underline">brennebeau.com</a>) — a direct-to-consumer brand of premium, European-inspired genuine-leather boots for women. I took it from idea to live store: brand, catalog, storefront, payments, fulfillment and operations.</p>
-      <p>I designed the line around European cities — Madrid, Zurich, Barcelona, Munich — built and <strong>deployed the full Shopify store myself</strong>, photographed and merchandised 13+ styles priced CAD $130–$300, configured checkout and shipping, and have run the whole operation since launch in 2024.</p>
-      <p style="font-weight:600;color:#04140a">It's the other half of my story: I don't just integrate other companies' supply chains — I've owned an entire retail supply chain end to end.</p>
-      <a href="https://brennebeau.com" target="_blank" rel="noopener" class="btn btn-dark">Visit BrenneBeau →</a>
-      <div class="watermark">BRENNEBEAU</div>
-    </div>
-
-    <!-- "How I built it" pillars -->
-    <div class="bento" style="margin-top:26px">
-      <div class="b reveal"><span class="ic">🏗️</span><h3>Built & deployed on Shopify</h3><p>Stood up the storefront end to end on Shopify — theme, navigation, product pages, custom domain (brennebeau.com), payments and checkout — and shipped it live.</p></div>
-      <div class="b reveal"><span class="ic">👢</span><h3>Brand & product line</h3><p>Created the BrenneBeau brand and a 13-style women's leather boot collection, each named after a European city, with merchandising and pricing strategy.</p></div>
-      <div class="b reveal"><span class="ic">📦</span><h3>Operations & fulfillment</h3><p>Owns catalog, inventory, supplier sourcing, order fulfillment and customer experience — the real retail supply chain behind the storefront.</p></div>
-    </div>
-
-    <!-- live product strip pulled from the store -->
-    <div class="store-strip">
-      <a class="prod reveal" href="https://brennebeau.com/products/madrid-black-knee-high-boots" target="_blank" rel="noopener">
-        <img src="https://cdn.shopify.com/s/files/1/0684/9465/5727/files/IMG_0143.jpg?v=1713471006&width=500" alt="Madrid black knee-high leather boots" loading="lazy" />
-        <div class="meta"><span>Madrid — Black</span><b>CAD $299.99</b></div>
-      </a>
-      <a class="prod reveal" href="https://brennebeau.com/products/brussels-brown-block-heel-boots" target="_blank" rel="noopener">
-        <img src="https://cdn.shopify.com/s/files/1/0684/9465/5727/files/IMG_0042_e7d1ec35-bd4a-4df1-8803-6aaab7f44244.jpg?v=1713469755&width=500" alt="Brussels brown block heel boots" loading="lazy" />
-        <div class="meta"><span>Brussels — Brown</span><b>CAD $279.99</b></div>
-      </a>
-      <a class="prod reveal" href="https://brennebeau.com/products/barcelona-leather-lace-up-boots" target="_blank" rel="noopener">
-        <img src="https://cdn.shopify.com/s/files/1/0684/9465/5727/files/IMG_0002.jpg?v=1713469056&width=500" alt="Barcelona leather lace-up boots" loading="lazy" />
-        <div class="meta"><span>Barcelona</span><b>CAD $289.99</b></div>
-      </a>
-      <a class="prod reveal" href="https://brennebeau.com/products/zurich-leather-block-heel-boots" target="_blank" rel="noopener">
-        <img src="https://cdn.shopify.com/s/files/1/0684/9465/5727/files/IMG_0043_b87c1305-5d78-45eb-8d99-c4ecd2ad39ac.jpg?v=1713471295&width=500" alt="Zurich snake-scale leather block heel boots" loading="lazy" />
-        <div class="meta"><span>Zurich</span><b>CAD $209.99</b></div>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SOCIAL MEDIA PROJECTS ===== -->
-<section id="social">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">08</span><h2>Social Media Projects</h2><div class="sub">Things I'm building in public — one post at a time.</div></div>
-    <div class="bento">
-      <a class="b wide reveal" href="https://www.instagram.com/nionoai/" target="_blank" rel="noopener">
-        <span class="ic">🐱</span>
-        <h3>Neon AI — @nionoai</h3>
-        <p>A daily Instagram series where my cat Noodle learns AI one concept at a time. Short visual stories on APIs, prompts, tokens, and machine learning — written for kids, teens, and curious beginners. Two posts a day, each one reviewed by hand. The end goal: a curriculum-based AI book that schools can buy.</p>
-        <p class="post-meta"><span>Daily on Instagram</span><span class="green">Follow &rarr;</span></p>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== BLOG ===== -->
-<section id="blog" style="background:var(--bg-2)">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">09</span><h2>Blog</h2><div class="sub">Short, practical notes for small business owners — from EDI and supply-chain data to AI automation that actually saves time.</div></div>
-    <div class="bento">
-      <a class="b reveal" href="blog/edi-data-movement-retail-supply-chain.html">
-        <span class="ic">📦</span>
-        <h3>What EDI Actually Does for a Retail Supply Chain</h3>
-        <p>Purchase orders, ship notices, invoices — the three documents behind most of retail EDI, and the mapping mistakes that cost small suppliers real money.</p>
-        <p class="post-meta"><span>Oct 4, 2026</span><span class="green">Read →</span></p>
-      </a>
-      <a class="b reveal" href="blog/ai-automation-shopify-small-business.html">
-        <span class="ic">🤖</span>
-        <h3>AI Automation for Shopify: Start With the Boring Work</h3>
-        <p>Inbox, product content, follow-ups — the order I recommend when a small store owner asks where AI fits, and the data cleanup that has to come first.</p>
-        <p class="post-meta"><span>Oct 4, 2026</span><span class="green">Read →</span></p>
-      </a>
-      <a class="b reveal" href="blog/forward-deployed-engineer-edi.html">
-        <span class="ic">🔧</span>
-        <h3>What a Forward Deployed Engineer Actually Does</h3>
-        <p>Forward Deployed Engineers embed with the customer and build on the ground. EDI people have done this for years. What the role actually is, from the warehouse floor.</p>
-        <p class="post-meta"><span>Oct 11, 2026</span><span class="green">Read →</span></p>
-      </a>
-      <a class="b reveal" href="blog/edi-discovery-five-questions.html">
-        <span class="ic">❓</span>
-        <h3>Before You Map Anything: Ask These Five Questions</h3>
-        <p>The most expensive EDI failures aren't mapping errors. Five discovery questions I ask before mapping any transaction.</p>
-        <p class="post-meta"><span>Oct 11, 2026</span><span class="green">Read →</span></p>
-      </a>
-      <a class="b reveal" href="blog/dont-automate-broken-process.html">
-        <span class="ic">⚙️</span>
-        <h3>Don't Automate a Broken Process</h3>
-        <p>Automating a broken process just makes a faster mess. The FDE rule: re-engineer first, automate second.</p>
-        <p class="post-meta"><span>Oct 14, 2026</span><span class="green">Read →</span></p>
-      </a>
-      <a class="b reveal" href="blog/document-is-never-the-process.html">
-        <span class="ic">📄</span>
-        <h3>The Document Is Never the Process</h3>
-        <p>An 850 is a purchase order; the process is the three phone calls before anyone sent it. Why document-reading AI fails like a bad EDI map.</p>
-        <p class="post-meta"><span>Oct 16, 2026</span><span class="green">Read →</span></p>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== EMERGING TECH ===== -->
-<section id="emerging-tech">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">10</span><h2>Emerging Technologies</h2><div class="sub">Short notes on the tech that's about to change how small businesses operate — what it is, what it costs, and whether it's ready.</div></div>
-    <div class="bento">
-      <a class="b reveal" href="blog/tool-note-watch.html">
-        <span class="ic">💻</span>
-        <h3>/watch — a Free Skill That Lets Claude Watch Videos Locally</h3>
-        <p>Paste a video link and Claude watches it on your machine: frames plus a local Whisper transcript, no API key. Free, MIT.</p>
-        <p class="post-meta"><span>Oct 25, 2026</span><span class="green">Read →</span></p>
-      </a>
-      <a class="b reveal" href="blog/tool-note-agent-reach.html">
-        <span class="ic">🤖</span>
-        <h3>Agent Reach — a Free Tool That Gives AI Agents Eyes on the Internet</h3>
-        <p>One CLI lets an agent read and search Twitter, Reddit, YouTube, GitHub and more, with zero API fees. Free, MIT, FACT verdict.</p>
-        <p class="post-meta"><span>Oct 24, 2026</span><span class="green">Read →</span></p>
-      </a>
-      <a class="b reveal" href="blog/tool-note-caveman-plugin.html">
-        <span class="ic">💻</span>
-        <h3>Caveman plugin — a Claude Code Plugin That Cuts Token Use</h3>
-        <p>A free Claude Code plugin that forces short, plain answers and cuts token use. Down 30 to 51% in the reviewer's test. FACT verdict.</p>
-        <p class="post-meta"><span>Oct 23, 2026</span><span class="green">Read →</span></p>
-      </a>
-      <a class="b reveal" href="blog/tool-note-claude-watch.html">
-        <span class="ic">🔧</span>
-        <h3>claude-watch — a Tool That Lets Claude Watch Any Video</h3>
-        <p>Paste a video link and Claude watches it: scene-change frames, a transcript, and a hook breakdown for the first 10 seconds. Free, MIT, FACT.</p>
-        <p class="post-meta"><span>Oct 22, 2026</span><span class="green">Read →</span></p>
-      </a>
-            <a class="b reveal" href="blog/tool-note-longcat-avatar-15.html">
-        <span class="ic">&#129302;</span>
-        <h3>LongCat-Video-Avatar 1.5 — a Free Talking-Avatar Model</h3>
-        <p>Feed it a photo and an audio clip, get a lip-synced talking video. Free and open-source; FACT verdict with a skin-tone caveat.</p>
-        <p class="post-meta"><span>Oct 19, 2026</span><span class="green">Read &#8594;</span></p>
-      </a>
-            <a class="b reveal" href="blog/tool-note-brag-launch-video.html">
-        <span class="ic">🎬</span>
-        <h3>/brag — a Free Launch-Video Skill</h3>
-        <p>One command turns any shipped project into a 20-second launch video with music and share copy. Free, MIT, FACT verdict.</p>
-        <p class="post-meta"><span>Oct 18, 2026</span><span class="green">Read →</span></p>
-      </a>
-<a class="b reveal" href="blog/tool-note-openart-vibe-direct.html">
-        <span class="ic">🎬</span>
-        <h3>OpenArt Vibe Direct — a One-Sentence Video Maker</h3>
-        <p>Type one sentence, get a full multi-scene explainer video. Starter is $14/mo; commercial rights need Plus. FACT from the reviewer.</p>
-        <p class="post-meta"><span>Oct 17, 2026</span><span class="green">Read →</span></p>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== TOOLS ===== -->
-<section id="tools">
-  <div class="wrap">
-    <div class="sec-head reveal"><span class="sec-no">11</span><h2>Free Tools</h2><div class="sub">Small tools I built and use myself. Free, no accounts, no sign-ups.</div></div>
-    <div class="bento">
-      <div class="b wide reveal"><span class="ic">📋</span><h3>Job applications</h3><p>A private board for a search. Saved, applied, interviewing, offer. The resume stays on the phone. Open it when you are ready to work a posting.</p><p><a class="btn btn-primary" href="https://jobs.nion-hoq.ca/">Open the tracker →</a></p></div>
-      <div class="b wide reveal"><span class="ic">🎮</span><h3>Pipeline Rescue</h3><p>An EDI arcade game. X12 documents rain down the wire — catch the ones your trading partner expects and let the rest drop. Three mistakes and the queue overflows. Plays in your browser, nothing to install.</p><p><a class="btn btn-primary" href="pipeline-rescue/">Play the game →</a></p></div>
-      <div class="b wide reveal"><span class="ic">🗳️</span><h3>Ward Campaigner</h3><p>A Dhaka ward-campaigning arcade game. Walk the maidan and convince gray voters before rival workers flip them back. Grab the mic for a mega-convince, dodge the monsoon scatter. 90 seconds, local leaderboard.</p><p><a class="btn btn-primary" href="ward-campaigner/">Play the game →</a></p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== CONTACT ===== -->
-<section id="contact">
-  <div class="wrap">
-    <div class="contact-card reveal">
-      <div>
-        <span class="sec-no">12</span>
-        <h2 style="margin-top:14px">Let's build something that works</h2>
-        <p class="sub">Consulting engagement, senior role, or a quick conversation — I'm open to all three.</p>
-        <div class="cc-cta">
-          <a href="mailto:ehoq.daika@gmail.com" class="btn btn-primary">Email me</a>
+  <section id="toolbox">
+    <h2>Toolbox</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>EDI & Integration</h3>
+        <div class="chips">
+          <span class="chip">ANSI X12</span><span class="chip">EDIFACT</span><span class="chip">IDOC</span><span class="chip">cXML / XML</span><span class="chip">AS2</span><span class="chip">SFTP / FTPS</span><span class="chip">TrueCommerce</span><span class="chip">SPS Commerce</span><span class="chip">Cleo</span><span class="chip">IBM Sterling</span><span class="chip">OpenText VAN</span><span class="chip">Trusted Link</span><span class="chip">MapForce</span>
         </div>
       </div>
-      <div>
-        <div class="info-row"><span>Email</span><a href="mailto:ehoq.daika@gmail.com" class="green">nion.texconnect@gmail.com</a></div>
-        <div class="info-row"><span>BrenneBeau</span><a href="https://brennebeau.com" target="_blank" rel="noopener" class="green">brennebeau.com</a></div>
-        <div class="info-row"><span>LinkedIn</span><a href="https://www.linkedin.com/in/ehteshum-ul-hoq-98027149/" target="_blank" rel="noopener" class="green">linkedin.com/in/ehteshum-ul-hoq-98027149/</a></div>
+      <div class="card">
+        <h3>ERP & Platforms</h3>
+        <div class="chips"><span class="chip">SAP S/4HANA</span><span class="chip">Sage 300 / X3</span><span class="chip">Dynamics D365</span><span class="chip">AS400</span></div>
+      </div>
+      <div class="card">
+        <h3>Data, Cloud & Scripting</h3>
+        <div class="chips"><span class="chip">SQL / PL-SQL</span><span class="chip">Shell / Bash</span><span class="chip">AWS EC2</span><span class="chip">Basic programming</span></div>
+      </div>
+      <div class="card">
+        <h3>Delivery & Tooling</h3>
+        <div class="chips"><span class="chip">Jira</span><span class="chip">Confluence</span><span class="chip">ServiceNow</span><span class="chip">Monday.com</span><span class="chip">MS Project / Visio</span><span class="chip">ITIL v4</span><span class="chip">PMP</span></div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
+
+  <section id="work">
+    <h2>Selected Work</h2>
+    <div class="cards">
+      <div class="card"><h3>Retail Partner Onboarding</h3><p>Stood up new ANSI X12 trading partners end to end — POs, ASNs, invoices — cutting manual handling and compliance chargebacks.</p></div>
+      <div class="card"><h3>Tier-2/3 Integration Lead</h3><p>Led a two-person escalation team at Körber, owning complex AS2/EDI/ERP incidents across a global client base with documented root-cause resolution.</p></div>
+      <div class="card"><h3>EDI → SAP S/4HANA Flows</h3><p>Mapped and validated IDOC-based document flows into SAP S/4HANA, keeping order-to-cash moving without manual intervention.</p></div>
+      <div class="card"><h3>Multi-VAN Connectivity</h3><p>Configured and troubleshot connectivity across OpenText VAN, IBM Sterling, SPS Commerce and Cleo.</p></div>
+      <div class="card"><h3>Escalation Program</h3><p>20+ monthly escalations at CGI, translated into business updates and C-level presentations.</p></div>
+      <div class="card"><h3>EDI-to-SQL Observability (in progress)</h3><p>Building SQL/PL-SQL tooling to query and audit integration data — turning opaque transmission logs into evidence teams can act on.</p></div>
+    </div>
+  </section>
+
+  <section id="brennebeau">
+    <div class="feature">
+      <h2>BrenneBeau</h2>
+      <p>I'm the founder and owner of BrenneBeau (brennebeau.com) — a direct-to-consumer brand of premium, European-inspired genuine-leather boots for women. I took it from idea to live store: brand, catalog, storefront, payments, fulfillment and operations. I designed the line around European cities — Madrid, Zurich, Barcelona, Munich — built and deployed the full Shopify store myself, photographed and merchandised 13+ styles priced CAD $130–$300, configured checkout and shipping, and have run the whole operation since launch in 2024. It's the other half of my story: I don't just integrate other companies' supply chains — I've owned an entire retail supply chain end to end.</p>
+      <p style="margin-top:1rem;"><a href="https://brennebeau.com" class="btn" target="_blank">Visit BrenneBeau →</a></p>
+      <div class="cards" style="margin-top:1.5rem;">
+        <div class="card"><h3>Built & deployed on Shopify</h3><p>Stood up the storefront end to end on Shopify — theme, navigation, product pages, custom domain (brennebeau.com), payments and checkout — and shipped it live.</p></div>
+        <div class="card"><h3>Brand & product line</h3><p>Created the BrenneBeau brand and a 13-style women's leather boot collection, each named after a European city, with merchandising and pricing strategy.</p></div>
+        <div class="card"><h3>Operations & fulfillment</h3><p>Owns catalog, inventory, supplier sourcing, order fulfillment and customer experience — the real retail supply chain behind the storefront.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="blog">
+    <h2>Blog</h2>
+    <div class="cards">
+      <div class="card"><h3>What EDI Actually Does for a Retail Supply Chain</h3><p class="meta">Oct 4, 2026</p><p>Purchase orders, ship notices, invoices — the three documents behind most of retail EDI, and the mapping mistakes that cost small suppliers real money.</p><p><a href="blog/edi-data-movement-retail-supply-chain.html">Read →</a></p></div>
+      <div class="card"><h3>AI Automation for Shopify: Start With the Boring Work</h3><p class="meta">Oct 4, 2026</p><p>Inbox, product content, follow-ups — the order I recommend when a small store owner asks where AI fits, and the data cleanup that has to come first.</p><p><a href="blog/ai-automation-shopify-small-business.html">Read →</a></p></div>
+      <div class="card"><h3>What a Forward Deployed Engineer Actually Does</h3><p class="meta">Oct 11, 2026</p><p>Forward Deployed Engineers embed with the customer and build on the ground. EDI people have done this for years. What the role actually is, from the warehouse floor.</p><p><a href="blog/forward-deployed-engineer-edi.html">Read →</a></p></div>
+      <div class="card"><h3>Before You Map Anything: Ask These Five Questions</h3><p class="meta">Oct 11, 2026</p><p>The most expensive EDI failures aren't mapping errors. Five discovery questions I ask before mapping any transaction.</p><p><a href="blog/edi-discovery-five-questions.html">Read →</a></p></div>
+      <div class="card"><h3>Don't Automate a Broken Process</h3><p class="meta">Oct 14, 2026</p><p>Automating a broken process just makes a faster mess. The FDE rule: re-engineer first, automate second.</p><p><a href="blog/dont-automate-broken-process.html">Read →</a></p></div>
+      <div class="card"><h3>The Document Is Never the Process</h3><p class="meta">Oct 16, 2026</p><p>An 850 is a purchase order; the process is the three phone calls before anyone sent it. Why document-reading AI fails like a bad EDI map.</p><p><a href="blog/document-is-never-the-process.html">Read →</a></p></div>
+    </div>
+  </section>
+
+  <section id="emerging-tech">
+    <h2>Emerging Technologies</h2>
+    <div class="cards" id="emerging-cards">
+      <div class="card"><h3>/watch — a Free Skill That Lets Claude Watch Videos Locally</h3><p class="meta">Oct 25, 2026</p><p>Paste a video link and Claude watches it on your machine: frames plus a local Whisper transcript, no API key. Free, MIT.</p><p><a href="blog/tool-note-watch.html">Read →</a></p></div>
+      <div class="card"><h3>Agent Reach — a Free Tool That Gives AI Agents Eyes on the Internet</h3><p class="meta">Oct 24, 2026</p><p>One CLI lets an agent read and search Twitter, Reddit, YouTube, GitHub and more, with zero API fees. Free, MIT, FACT verdict.</p><p><a href="blog/tool-note-agent-reach.html">Read →</a></p></div>
+      <div class="card"><h3>Caveman plugin — a Claude Code Plugin That Cuts Token Use</h3><p class="meta">Oct 23, 2026</p><p>A free Claude Code plugin that forces short, plain answers and cuts token use. Down 30 to 51% in the reviewer's test. FACT verdict.</p><p><a href="blog/tool-note-caveman-plugin.html">Read →</a></p></div>
+      <div class="card"><h3>claude-watch — a Tool That Lets Claude Watch Any Video</h3><p class="meta">Oct 22, 2026</p><p>Paste a video link and Claude watches it: scene-change frames, a transcript, and a hook breakdown for the first 10 seconds. Free, MIT, FACT.</p><p><a href="blog/tool-note-claude-watch.html">Read →</a></p></div>
+      <div class="card"><h3>LongCat-Video-Avatar 1.5 — a Free Talking-Avatar Model</h3><p class="meta">Oct 19, 2026</p><p>Feed it a photo and an audio clip, get a lip-synced talking video. Free and open-source; FACT verdict with a skin-tone caveat.</p><p><a href="blog/tool-note-longcat-avatar-15.html">Read →</a></p></div>
+      <div class="card"><h3>/brag — a Free Launch-Video Skill</h3><p class="meta">Oct 18, 2026</p><p>One command turns any shipped project into a 20-second launch video with music and share copy. Free, MIT, FACT verdict.</p><p><a href="blog/tool-note-brag-launch-video.html">Read →</a></p></div>
+      <div class="card"><h3>OpenArt Vibe Direct — a One-Sentence Video Maker</h3><p class="meta">Oct 17, 2026</p><p>Type one sentence, get a full multi-scene explainer video. Starter is $14/mo; commercial rights need Plus. FACT from the reviewer.</p><p><a href="blog/tool-note-openart-vibe-direct.html">Read →</a></p></div>
+    </div>
+  </section>
+
+  <section id="tools">
+    <h2>Free Tools</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Job applications</h3>
+        <p>A private board for a search. Saved, applied, interviewing, offer. The resume stays on the phone. Open it when you are ready to work a posting.</p>
+        <p style="margin-top:0.75rem;"><a href="https://jobs.nion-hoq.ca" class="btn">Open the tracker →</a></p>
+      </div>
+      <div class="card">
+        <h3>Pipeline Rescue</h3>
+        <p>An EDI arcade game. X12 documents rain down the wire — catch the ones your trading partner expects and let the rest drop. Three mistakes and the queue overflows. Plays in your browser, nothing to install.</p>
+        <p style="margin-top:0.75rem;"><a href="pipeline-rescue/" class="btn secondary">Play the game →</a></p>
+      </div>
+      <div class="card">
+        <h3>Ward Campaigner</h3>
+        <p>A Dhaka ward-campaigning arcade game. Walk the maidan and convince gray voters before rival workers flip them back. Grab the mic for a mega-convince, dodge the monsoon scatter. 90 seconds, local leaderboard.</p>
+        <p style="margin-top:0.75rem;"><a href="ward-campaigner/" class="btn secondary">Play the game →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <h2>Let's build something that works</h2>
+    <p class="sub">Consulting engagement, senior role, or a quick conversation — I'm open to all three.</p>
+    <p>
+      <a href="mailto:ehoq.daika@gmail.com" class="btn">Email me</a>
+      <a href="https://www.linkedin.com/in/ehteshum-ul-hoq-98027149/" class="btn secondary" target="_blank">LinkedIn</a>
+    </p>
+    <p style="margin-top:1rem; color:var(--muted); font-size:0.9rem;">nion.texconnect@gmail.com · BrenneBeau: <a href="https://brennebeau.com">brennebeau.com</a></p>
+  </section>
+</main>
 
 <footer>
-  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
-    <span>© <span id="year"></span> Nion Hoq</span>
-    <span>EDI & Supply-Chain Integration · Founder of BrenneBeau · Consultant</span>
-  </div>
+  Nion Hoq · Systems Integrator · EDI & ERP<br>
+  <a href="https://nionhoq.github.io">nionhoq.github.io</a>
 </footer>
 
 <script>
-  document.getElementById('year').textContent = new Date().getFullYear();
-  const header = document.querySelector('header');
-  addEventListener('scroll', () => header.classList.toggle('scrolled', scrollY > 12));
-  const burger = document.getElementById('burger'), navLinks = document.getElementById('navLinks');
-  burger.addEventListener('click', () => navLinks.classList.toggle('open'));
-  navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
-  const io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);} }), {threshold:.14});
-  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+const toggle = document.getElementById('themeToggle');
+const html = document.documentElement;
+function updateIcon() {
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  toggle.textContent = isDark ? '🌙' : '☀';
+}
+updateIcon();
+toggle.addEventListener('click', () => {
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('nh-theme', next);
+  updateIcon();
+});
 </script>
-<script data-goatcounter="https://nionhoq.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
