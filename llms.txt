@@ -1,6 +1,6 @@
 # Nion Hoq
 
-> EDI and supply-chain integration specialist based in Ontario, Canada. 10+ years in IT and 7+ years integrating retail trading partners with SAP S/4HANA, D365 and VANs over AS2/SFTP using ANSI X12 and EDIFACT. Builds AI agents for order-to-cash exceptions and trading-partner onboarding. Also known as Ehteshum ul Hoq. Founder of BrenneBeau, a women's leather boot brand he runs end to end.
+> EDI and supply-chain integration specialist based in Ontario, Canada. 10+ years in IT and 8+ years integrating retail trading partners with SAP S/4HANA, D365 and VANs over AS2/SFTP using ANSI X12 and EDIFACT. Builds AI agents for order-to-cash exceptions and trading-partner onboarding. Also known as Ehteshum ul Hoq. Founder of BrenneBeau, a women's leather boot brand he runs end to end.
 
 ## Consultancy
 
@@ -28,6 +28,7 @@ Nion Hoq is available for AI consultancy engagements with supply-chain and EDI t
 ## Notes
 
 - [Tool notes](https://nion-hoq.ca/notes/): short field notes on AI tools, tested as I go, with the verdict kept exactly as given
+- [AI tools I have tested](https://nion-hoq.ca/ai-tools/): the full tracked list — every tool, its verdict, and what it costs
 
 ## Builds
 
