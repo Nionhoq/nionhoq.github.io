@@ -1,0 +1,40 @@
+# Nion Hoq
+
+> EDI and supply-chain integration specialist based in Ontario, Canada. Ten years integrating retail trading partners with SAP S/4HANA, D365 and VANs over AS2/SFTP using ANSI X12 and EDIFACT. Builds AI agents for order-to-cash exceptions and trading-partner onboarding. Also known as Ehteshum ul Hoq. Founder of BrenneBeau, a women's leather boot brand he runs end to end.
+
+## Consultancy
+
+Nion Hoq is available for AI consultancy engagements with supply-chain and EDI teams: AI-readiness assessments for order-to-cash, agentic exception handling for failed EDI transactions, and trading-partner onboarding acceleration. Contact by email or LinkedIn below.
+
+## About
+
+- [Profile and portfolio](https://nion-hoq.ca/): who I am, selected work, and the brands and systems I have built on
+
+## Point of view
+
+- [What a Forward Deployed Engineer actually does](https://nion-hoq.ca/blog/forward-deployed-engineer-edi.html)
+- [Don't automate a broken process](https://nion-hoq.ca/blog/dont-automate-broken-process.html)
+- [The document is never the process](https://nion-hoq.ca/blog/document-is-never-the-process.html)
+- [The last mile of AI in supply chain is a mapping problem](https://nion-hoq.ca/blog/last-mile-mapping-problem.html)
+- [An AI agent that reads the 856 before a human does](https://nion-hoq.ca/blog/agent-reads-856.html)
+
+## EDI fundamentals
+
+- [What EDI actually does for a retail supply chain](https://nion-hoq.ca/blog/edi-data-movement-retail-supply-chain.html)
+- [Before you map anything: five questions](https://nion-hoq.ca/blog/edi-discovery-five-questions.html)
+- [AI automation for Shopify: start with the boring work](https://nion-hoq.ca/blog/ai-automation-shopify-small-business.html)
+- [All posts](https://nion-hoq.ca/blog/)
+
+## Notes
+
+- [Tool notes](https://nion-hoq.ca/notes/): short field notes on AI tools, tested as I go, with the verdict kept exactly as given
+
+## Builds
+
+- [Pipeline Rescue](https://nion-hoq.ca/pipeline-rescue/): an EDI arcade game — catch the X12 documents your trading partner expects
+- [Job tracker app](https://jobs.nion-hoq.ca): a phone-first application board whose AI tailoring only uses experience the user confirms (Honest Match Check)
+
+## Contact
+
+- Email: ehoq.daika@gmail.com
+- LinkedIn: https://www.linkedin.com/in/ehteshum-ul-hoq-98027149/
