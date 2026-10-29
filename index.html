@@ -246,7 +246,19 @@ footer {
   font-size: 0.9rem;
 }
 footer a { color: var(--accent); text-decoration: none; }
-.casual-photo{width:100%;max-width:360px;border-radius:18px;display:block;margin:0 auto;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+.casual-photo{width:100%;border-radius:18px;display:block;box-shadow:0 12px 32px rgba(0,0,0,.18);position:relative}
+.photo-glow{position:relative;max-width:360px;margin:0 auto;isolation:isolate}
+.photo-glow::before{content:"";position:absolute;left:50%;bottom:-16px;width:112%;height:72px;transform:translateX(-50%);background:radial-gradient(ellipse at center, rgba(251,191,36,.55), rgba(45,212,191,.28) 55%, transparent 72%);filter:blur(18px);z-index:-1;animation:glowFloat 9s ease-in-out infinite alternate}
+@keyframes glowFloat{from{transform:translate(-50%,0) scale(1)}to{transform:translate(-50%,-10px) scale(1.06)}}
+.brenne-feature{background:linear-gradient(135deg,#0e7c86,#0a4f5c);border:none;color:#f2faf9}
+.brenne-feature h2{color:#ffffff}
+.brenne-feature p{color:rgba(255,255,255,.88)}
+.brenne-feature .card{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.28)}
+.brenne-feature .card h3{color:#ffffff}
+.brenne-feature .card p{color:rgba(255,255,255,.85)}
+.brenne-feature .btn{background:#ffffff;color:#0a4f5c}
+[data-theme="dark"] .brenne-feature{background:linear-gradient(135deg,#0d6e8c,#07364a)}
+@media (prefers-reduced-motion: reduce){.photo-glow::before{animation:none}}
 
 @media (max-width: 640px) {
   nav { flex-wrap: wrap; row-gap: 0.5rem; padding: 0.75rem 1rem; }
@@ -413,7 +425,7 @@ footer a { color: var(--accent); text-decoration: none; }
   </section>
 
   <section id="brennebeau">
-    <div class="feature">
+    <div class="feature brenne-feature">
       <h2>BrenneBeau</h2>
       <p>I'm the founder and owner of BrenneBeau (brennebeau.com) — a direct-to-consumer brand of premium, European-inspired genuine-leather boots for women. I took it from idea to live store: brand, catalog, storefront, payments, fulfillment and operations. I designed the line around European cities — Madrid, Zurich, Barcelona, Munich — built and deployed the full Shopify store myself, photographed and merchandised 13+ styles priced CAD $130–$300, configured checkout and shipping, and have run the whole operation since launch in 2024. It's the other half of my story: I don't just integrate other companies' supply chains — I've owned an entire retail supply chain end to end.</p>
       <p style="margin-top:1rem;"><a href="https://brennebeau.com" class="btn" target="_blank">Visit BrenneBeau →</a></p>
@@ -425,7 +437,7 @@ footer a { color: var(--accent); text-decoration: none; }
     </div>
   </section>
 
-  <img class="casual-photo" src="assets/casual.jpg" alt="Nion Hoq" loading="lazy">
+  <div class="photo-glow"><img class="casual-photo" src="assets/casual.jpg" alt="Nion Hoq" loading="lazy"></div>
 
   <section id="blog">
     <h2>Blog</h2>
