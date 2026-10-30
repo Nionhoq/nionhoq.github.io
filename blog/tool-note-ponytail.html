@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ponytail — a Skill That Stops Agents Writing Code You Don't Need | Nion Hoq</title>
+<meta name="description" content="Ponytail is a free, MIT Claude Code skill that forces an agent to write only the code a task needs. In the creator's test, a build cost fell from $1.03 to $0.25." />
+<meta name="author" content="Nion Hoq" />
+<link rel="canonical" href="https://nion-hoq.ca/blog/tool-note-ponytail.html" />
+<meta property="og:title" content="Ponytail — a Skill That Stops Agents Writing Code You Don't Need | Nion Hoq" />
+<meta property="og:description" content="Ponytail is a free, MIT Claude Code skill that forces an agent to write only the code a task needs. In the creator's test, a build cost fell from $1.03 to $0.25." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nion-hoq.ca/blog/tool-note-ponytail.html" />
+<meta property="article:published_time" content="2026-10-30" />
+<meta property="article:author" content="Nion Hoq" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../styles.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Ponytail — a Skill That Stops Agents Writing Code You Don't Need",
+  "description": "Ponytail is a free, MIT Claude Code skill that forces an agent to write only the code a task needs. In the creator's test, a build cost fell from $1.03 to $0.25.",
+  "datePublished": "2026-10-30",
+  "dateModified": "2026-10-30",
+  "author": {"@type": "Person", "name": "Nion Hoq", "url": "https://nion-hoq.ca/"},
+  "mainEntityOfPage": "https://nion-hoq.ca/blog/tool-note-ponytail.html"
+}
+</script>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="../index.html"><span class="mark">N</span>Nion Hoq</a>
+      <div class="nav-links" id="navLinks" style="display:flex">
+        <a href="../notes/" class="back-link">← All posts</a>
+        <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+      </div>
+    </nav>
+  </div>
+</header>
+<main>
+  <article>
+    <div class="post-head">
+      <span class="pill"><span class="ping"></span>AI Tool Watch</span>
+      <h1>Ponytail — a Skill That Stops Agents Writing Code You Don't Need</h1>
+      <p class="post-byline">By Nion Hoq · Oct 30, 2026 · 1 min read</p>
+    </div>
+    <div class="post-body">
+      <p>Ponytail is a Claude Code skill that forces a coding agent to write only the code a task needs.</p>
+      <p>It works through a short ladder. Reuse code that already exists first. Then use the standard library. Then a native feature of the platform. Then a one-liner. Only then write the smallest new code that does the job.</p>
+      <p>The repo makes one limit clear. Less code does not mean cutting validation, error handling, or security. The code is small because it is necessary, not because it was squeezed.</p>
+      <p>The verdict in my tracker is FACT, the creator's stamp. In his Calendly-clone test, a build that cost $1.03 without the skill cost $0.25 with it.</p>
+      <p>Cost: free. Ponytail is open source under the MIT licence. You still pay your own Claude usage, which is the point: less code written means a smaller bill for that usage.</p>
+      <p>For me, the use is plain. Cheaper Claude Code sessions on the auto-reel machine build and on course business dev work, where long sessions add up fast.</p>
+      <p>Supply-chain angle: EDI work rewards the same habit. A map fix that reuses an existing segment or a translator's built-in function beats a new custom routine that someone has to maintain through every partner change.</p>
+      <p>Link: <a href="https://github.com/DietrichGebert/ponytail">github.com/DietrichGebert/ponytail</a></p>
+    </div>
+    <div class="wrap">
+      <div class="post-cta">
+        <h3>Let's talk</h3>
+        <p>I do this work: EDI, supply-chain integration, and AI-assisted automation for operations that can't afford downtime.</p>
+        <a href="../index.html#contact" class="btn btn-primary">Get in touch →</a>
+      </div>
+    </div>
+  </article>
+</main>
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <span>© <span id="year"></span> Nion Hoq</span>
+    <span>EDI &amp; Supply-Chain Integration · Founder of BrenneBeau · Consultant</span>
+  </div>
+</footer>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+<script data-goatcounter="https://nionhoq.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
