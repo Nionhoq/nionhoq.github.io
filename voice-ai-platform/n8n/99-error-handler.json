@@ -1,0 +1,132 @@
+{
+  "name": "Voice \u00b7 99 Error handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "dfb4571f-04ad-5c83-a88c-f13c34d6b07a",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Trigger payload has execution metadata + error, not node data. Still redact:\n// error messages from HTTP nodes can echo request bodies (phone numbers, names).\nconst e = $json.execution || {};\nconst msg = String(e.error?.message || 'unknown').slice(0, 500)\n  .replace(/\\+?\\d[\\d\\s().-]{7,}\\d/g, '[phone]')\n  .replace(/[\\w.+-]+@[\\w-]+\\.[\\w.]+/g, '[email]');\nconst status = Number(e.error?.httpCode || e.error?.context?.httpCode || 0);\nconst retryable = status === 0 || status === 429 || status >= 500;\nreturn [{ json: {\n  workflow: $json.workflow?.name || 'unknown',\n  node: e.lastNodeExecuted || null,\n  error: msg,\n  retryable,\n  payload: { executionId: e.id || null, url: e.url || null, mode: e.mode || null },\n}}];"
+      },
+      "id": "6a6a898c-ba64-5504-a015-d3332e8ffda5",
+      "name": "Classify & redact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO voice.dead_letters (workflow, node, error, payload, retryable) VALUES ($1, $2, $3, $4::jsonb, $5) RETURNING id;",
+        "options": {
+          "queryReplacement": "={{ [$json.workflow, $json.node, $json.error, JSON.stringify($json.payload), $json.retryable] }}"
+        }
+      },
+      "id": "6b3c850f-26eb-5689-8001-51008bfd352c",
+      "name": "Write dead letter",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        440,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_PG_CREDENTIAL_ID",
+          "name": "voice_app (Postgres)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_OPS_WEBHOOK }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: `:rotating_light: ${$('Classify & redact').item.json.workflow} / ${$('Classify & redact').item.json.node}: ${$('Classify & redact').item.json.error} (dead_letter ${$json.id}, retryable=${$('Classify & redact').item.json.retryable})` }) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "0aff89f1-fe9d-5069-9e16-df9f3120bff3",
+      "name": "Alert ops",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Classify & redact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify & redact": {
+      "main": [
+        [
+          {
+            "node": "Write dead letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write dead letter": {
+      "main": [
+        [
+          {
+            "node": "Alert ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "timezone": "UTC"
+  },
+  "pinData": {},
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "Set as Error Workflow on 01-03. Writes redacted dead letters and alerts ops."
+  },
+  "tags": [
+    {
+      "name": "voice-ai"
+    }
+  ]
+}

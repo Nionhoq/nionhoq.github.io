@@ -1,0 +1,452 @@
+{
+  "name": "Voice \u00b7 01 VAPI async events",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi-events",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "d5dc3a61-d722-5e69-9d68-692ecc3e6178",
+      "name": "VAPI events (from edge)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "0feaf00f-0849-5e50-97ab-2bb275344022"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verify the edge worker's HMAC so n8n never trusts the public internet.\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto. Signing key from env (or an n8n credential).\nconst crypto = require('crypto');\nconst key = $env.EDGE_N8N_SIGNING_KEY;\nconst out = [];\nfor (let i = 0; i < $input.all().length; i++) {\n  const item = $input.all()[i];\n  const h = item.json.headers || {};\n  const ts = Number(h['x-edge-timestamp'] || 0);\n  // Webhook option rawBody=true exposes exact bytes; fall back to re-serialising the\n  // parsed JSON (byte-identical when the sender used JSON.stringify, as the edge does).\n  let raw;\n  try { raw = (await this.helpers.getBinaryDataBuffer(i, 'data')).toString('utf8'); }\n  catch { raw = JSON.stringify(item.json.body); }\n  const expected = crypto.createHmac('sha256', key).update(`${ts}.${raw}`).digest('hex');\n  const given = Buffer.from(String(h['x-edge-signature'] || ''), 'utf8');\n  const fresh = Math.abs(Date.now() / 1000 - ts) <= 300;\n  const valid = fresh && given.length === expected.length &&\n                crypto.timingSafeEqual(given, Buffer.from(expected, 'utf8'));\n  out.push({ json: { valid, requestId: h['x-request-id'] || null, ...item.json.body } });\n}\nreturn out;"
+      },
+      "id": "e7c6ea6a-06b6-5928-b6a4-f35b8633c128",
+      "name": "Verify edge signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ef3a37f7-a714-5a2e-b477-7b2e46216dcd",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "15fd06bc-837c-51be-8fbc-bdd85e84b922",
+      "name": "Signature valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "f028e10c-7f0b-5e2b-b02f-17ec6018efc9",
+      "name": "Ack 202",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\":\"invalid signature\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "b0d94b0f-272f-5639-a4bf-54e72268655d",
+      "name": "Reject 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Minimise before anything else touches the payload (GDPR Art. 5(1)(c), HIPAA minimum necessary).\n// Only fields below leave this node; the raw transcript is never stored here.\nconst m = $json.message || {};\nconst call = m.call || {};\nconst a = m.analysis || {};\nreturn [{ json: {\n  tenantId: $json.tenantId,\n  type: m.type,\n  idemKey: m.type === 'end-of-call-report' ? `${call.id}:eocr` : `${call.id}:${m.status || m.type}`,\n  call: {\n    id: call.id,\n    direction: call.type === 'outboundPhoneCall' ? 'outbound' : 'inbound',\n    status: m.type === 'end-of-call-report' ? 'ended' : (m.status || 'unknown'),\n    endedReason: m.endedReason || null,\n    startedAt: m.startedAt || call.startedAt || null,\n    endedAt: m.endedAt || call.endedAt || null,\n    cost: m.cost ?? null,\n    summary: a.summary || null,          // assistant disables summaries for HIPAA tenants\n  },\n  structured: a.structuredData || {},\n}}];"
+      },
+      "id": "00f20597-dba2-53a0-b721-b7e25e802809",
+      "name": "Redact & map",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT voice.record_call_event($1::uuid, $2, $3::jsonb) AS claimed;",
+        "options": {
+          "queryReplacement": "={{ [$json.tenantId, $json.idemKey, JSON.stringify($json.call)] }}"
+        }
+      },
+      "id": "b4f9056b-60e6-57af-a168-9eecb1c625f4",
+      "name": "Record call event (idempotent)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1100,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_PG_CREDENTIAL_ID",
+          "name": "voice_app (Postgres)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "06f16325-c04b-5727-b95a-4117930aae84",
+              "leftValue": "={{ $json.claimed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e7fe640a-1e95-57f7-8540-6f361b86773e",
+      "name": "First delivery?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "780c97ec-50df-579b-a26a-a2e9cc42c443",
+                    "leftValue": "={{ $('Redact & map').item.json.type }}",
+                    "rightValue": "end-of-call-report",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "end-of-call-report"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "75e66ade-34c0-5e38-b35f-4a0618046b3c",
+                    "leftValue": "={{ $('Redact & map').item.json.type }}",
+                    "rightValue": "status-update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status-update"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "414629db-b0db-556c-8975-5f42f75148ce",
+                    "leftValue": "={{ $('Redact & map').item.json.type }}",
+                    "rightValue": "hang",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "hang"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "5261f172-dab4-5172-88e2-d71ee3c1e674",
+      "name": "Route by type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1540,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/activities",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $('Redact & map').item.json.tenantId, callId: $('Redact & map').item.json.call.id, outcome: $('Redact & map').item.json.structured, endedReason: $('Redact & map').item.json.call.endedReason }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "f54d23ba-bfa7-5ab8-9a4f-520611c64468",
+      "name": "CRM: log call activity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        80
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {},
+      "id": "e29ce0f9-d8ee-5ced-9346-dee40ddf321b",
+      "name": "No-op (status tracked in DB)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_OPS_WEBHOOK }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: `hang event tenant=${$('Redact & map').item.json.tenantId} call=${$('Redact & map').item.json.call.id}` }) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "1acd0410-7697-59c4-948d-fe06572d1a77",
+      "name": "Alert: caller hung up on agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        360
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "VAPI events (from edge)": {
+      "main": [
+        [
+          {
+            "node": "Verify edge signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify edge signature": {
+      "main": [
+        [
+          {
+            "node": "Signature valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signature valid?": {
+      "main": [
+        [
+          {
+            "node": "Ack 202",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack 202": {
+      "main": [
+        [
+          {
+            "node": "Redact & map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redact & map": {
+      "main": [
+        [
+          {
+            "node": "Record call event (idempotent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record call event (idempotent)": {
+      "main": [
+        [
+          {
+            "node": "First delivery?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First delivery?": {
+      "main": [
+        [
+          {
+            "node": "Route by type",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Route by type": {
+      "main": [
+        [
+          {
+            "node": "CRM: log call activity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No-op (status tracked in DB)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert: caller hung up on agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "errorWorkflow": "REPLACE_ERROR_WORKFLOW_ID",
+    "timezone": "UTC"
+  },
+  "pinData": {},
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "Receives end-of-call-report / status-update / hang from the edge worker. Acks first, then processes idempotently."
+  },
+  "tags": [
+    {
+      "name": "voice-ai"
+    }
+  ]
+}
