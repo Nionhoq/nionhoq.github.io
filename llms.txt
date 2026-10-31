@@ -4,7 +4,11 @@
 
 ## Consultancy
 
-Nion Hoq is available for AI consultancy engagements with supply-chain and EDI teams: AI-readiness assessments for order-to-cash, agentic exception handling for failed EDI transactions, and trading-partner onboarding acceleration. Contact by email or LinkedIn below.
+Nion Hoq is an EDI and supply chain integration consultant who applies AI to EDI operations: mapping, partner onboarding, testing, and error triage. He has 8+ years in EDI and 10+ years in IT, has onboarded 30+ trading partners, and works with retail, distribution, and 3PL supply chains across North America. His specialty is modernizing legacy EDI, including TrustedLink (TLE) environments, and adding AI assistance without ripping out the stack.
+
+- [EDI + AI Consulting](https://nion-hoq.ca/consulting/): who it is for, the work covered (trading partner onboarding, ANSI X12 and EDIFACT mapping, spec compliance testing, legacy EDI modernization, AI error triage and exception handling), proof, and how an engagement starts (fixed-fee assessment, scoped in writing; no subscriptions)
+
+He is the author of "No Map, No Mentor: A Modern Field Guide to EDI" (forthcoming), a practitioner field guide to modern EDI. Contact by email or LinkedIn below.
 
 ## About
 
