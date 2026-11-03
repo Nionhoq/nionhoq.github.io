@@ -6,107 +6,252 @@
 <title>Noodle's Doodle Page — NION AI Art</title>
 <meta name="description" content="Noodle the cat explains AI to kids and grownups. Doodles, a free coloring page, and one very short story in English and Bengali.">
 <style>
-  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", sans-serif; background:#FFF6E9; color:#2B2B2B; }
-  .wrap { max-width:880px; margin:0 auto; padding:36px 18px 60px; }
+  :root { --ink:#2B2B2B; --muted:#5A5448; --cream:#FFF6E9; --sun:#FFE9A8; --pink:#FCE4EC; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", sans-serif; background:var(--cream); color:var(--ink); overflow-x:clip; }
+  .wrap { position:relative; z-index:1; max-width:880px; margin:0 auto; padding:36px 18px 60px; }
   .dots { text-align:center; font-size:20px; letter-spacing:8px; }
-  h1 { text-align:center; font-size:44px; margin:10px 0 4px; }
-  .tag { text-align:center; color:#5A5448; font-size:18px; margin:0 auto 8px; max-width:620px; }
+  h1 { text-align:center; font-size:clamp(34px, 9vw, 48px); margin:10px 0 4px; }
+  .tag { text-align:center; color:var(--muted); font-size:18px; margin:0 auto 8px; max-width:620px; }
   .bn-line { text-align:center; font-size:20px; margin:14px 0 4px; }
-  .bn-sub { text-align:center; color:#5A5448; font-size:14px; margin:0 0 26px; }
+  .bn-sub { text-align:center; color:var(--muted); font-size:14px; margin:0 0 26px; }
   h2 { font-size:28px; margin:44px 0 6px; }
-  .sub { color:#5A5448; margin:0 0 18px; }
-  .hero { display:block; width:100%; max-width:560px; margin:0 auto; border:2px solid #2B2B2B; border-radius:20px; box-shadow:0 4px 0 #2B2B2B; }
+  .sub { color:var(--muted); margin:0 0 18px; }
+  .hero { display:block; width:100%; max-width:560px; margin:0 auto; border:2px solid var(--ink); border-radius:20px; box-shadow:0 4px 0 var(--ink); }
   .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:16px; }
-  .card { background:#fff; border:2px solid #2B2B2B; border-radius:16px; box-shadow:0 4px 0 #2B2B2B; overflow:hidden; }
+  .card { background:#fff; border:2px solid var(--ink); border-radius:16px; box-shadow:0 4px 0 var(--ink); overflow:hidden; transition: transform .25s ease, box-shadow .25s ease; }
   .card img { display:block; width:100%; height:auto; }
   .card p { margin:0; padding:12px 14px 16px; font-size:15px; }
   .card p b { display:block; font-size:16px; margin-bottom:3px; }
-  .panel { background:#fff; border:2px solid #2B2B2B; border-radius:16px; box-shadow:0 4px 0 #2B2B2B; padding:22px; margin:16px 0; }
+  .panel { background:#fff; border:2px solid var(--ink); border-radius:16px; box-shadow:0 4px 0 var(--ink); padding:22px; margin:16px 0; }
   .panel img.art { display:block; width:100%; max-width:420px; margin:0 auto 14px; border-radius:12px; }
   .panel p { font-size:17px; line-height:1.55; margin:8px 0; }
-  a.btn { display:inline-block; text-decoration:none; color:#2B2B2B; background:#FFE9A8; border:2px solid #2B2B2B;
-          border-radius:14px; padding:13px 20px; font-size:17px; font-weight:700; box-shadow:0 4px 0 #2B2B2B; margin:8px 8px 4px 0; }
-  a.btn:active { transform:translateY(3px); box-shadow:0 1px 0 #2B2B2B; }
+  a.btn { display:inline-block; text-decoration:none; color:var(--ink); background:var(--sun); border:2px solid var(--ink);
+          border-radius:14px; padding:13px 20px; font-size:17px; font-weight:700; box-shadow:0 4px 0 var(--ink); margin:8px 8px 4px 0;
+          transition: transform .15s ease, box-shadow .15s ease; }
+  a.btn:hover { transform:translateY(-2px); box-shadow:0 6px 0 var(--ink); }
+  a.btn:active { transform:translateY(3px); box-shadow:0 1px 0 var(--ink); }
   a.btn.plain { background:#fff; }
-  audio, video { width:100%; max-width:560px; display:block; margin:12px auto; border-radius:12px; }
+  audio { width:100%; max-width:560px; display:block; margin:12px auto; border-radius:12px; }
   .story-en, .story-bn { margin-top:10px; }
-  .chip { display:inline-block; background:#FCE4EC; border:2px solid #2B2B2B; border-radius:999px; padding:2px 12px; font-size:13px; font-weight:700; }
+  .chip { display:inline-block; background:var(--pink); border:2px solid var(--ink); border-radius:999px; padding:2px 12px; font-size:13px; font-weight:700; }
   .foot { text-align:center; color:#8A8272; font-size:13px; margin-top:44px; }
   .foot a { color:#8A8272; }
+
+  /* ---------- motion layer ---------- */
+  /* floating doodle field (paws + stars drifting over the whole page) */
+  .sky { position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
+  .sky span { position:absolute; top:-8vh; left:var(--x); font-size:var(--s,22px); opacity:.35;
+               animation: fall var(--d,26s) linear var(--dl,0s) infinite; will-change:transform; }
+  @keyframes fall {
+    0%   { transform:translate3d(0,-8vh,0) rotate(0deg); }
+    50%  { transform:translate3d(3vw,45vh,0) rotate(160deg); }
+    100% { transform:translate3d(-2vw,108vh,0) rotate(330deg); }
+  }
+
+  /* hero stage: bobbing Noodle + orbiting doodles + headline entrance */
+  .hero-stage { position:relative; max-width:560px; margin:0 auto; }
+  .hero-stage .hero { animation: bob 5.5s ease-in-out infinite; }
+  @keyframes bob {
+    0%,100% { transform:translateY(0) rotate(-.5deg); }
+    50%     { transform:translateY(-11px) rotate(.6deg); }
+  }
+  .orbit { position:absolute; font-size:30px; pointer-events:none; animation: sway 4s ease-in-out infinite; }
+  .orbit.o1 { top:-14px; left:-8px; }
+  .orbit.o2 { top:6%; right:-10px; animation-delay:-1.3s; font-size:24px; }
+  .orbit.o3 { bottom:-12px; left:6%; animation-delay:-2.2s; font-size:26px; }
+  .orbit.o4 { bottom:8%; right:-6px; animation-delay:-.7s; }
+  @keyframes sway {
+    0%,100% { transform:translateY(0) rotate(-9deg); }
+    50%     { transform:translateY(-13px) rotate(11deg); }
+  }
+  .pop-in { animation: pop .8s cubic-bezier(.2,1.6,.4,1) both; }
+  .pop-in-late { animation: pop .8s cubic-bezier(.2,1.6,.4,1) .18s both; }
+  @keyframes pop {
+    from { opacity:0; transform:scale(.82) translateY(16px); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+  }
+
+  /* scroll reveal (initial state only when JS is on, so no-JS still reads fine) */
+  html.js .reveal { opacity:0; transform:translateY(28px) rotate(-.4deg); transition:opacity .7s ease, transform .7s cubic-bezier(.2,.9,.3,1); }
+  html.js .reveal.in { opacity:1; transform:none; }
+  .grid .card:nth-child(2) { transition-delay:.06s; }
+  .grid .card:nth-child(3) { transition-delay:.12s; }
+  .grid .card:nth-child(4) { transition-delay:.18s; }
+  .grid .card:nth-child(5) { transition-delay:.24s; }
+
+  /* gallery cards: wiggle + tilt on hover */
+  .card:hover { transform:rotate(-1.6deg) scale(1.03); box-shadow:0 8px 0 var(--ink); z-index:2; }
+  .card:hover img { animation: wiggle .5s ease-in-out; }
+  @keyframes wiggle {
+    0%,100% { transform:rotate(0) scale(1); }
+    25% { transform:rotate(-2.5deg) scale(1.04); }
+    60% { transform:rotate(2.5deg) scale(1.04); }
+  }
+
+  /* expressions marquee */
+  .marquee { margin:30px -18px 4px; border-top:2px solid var(--ink); border-bottom:2px solid var(--ink);
+             background:var(--pink); overflow:hidden; padding:10px 0; }
+  .marquee-track { display:flex; width:max-content; animation: slide 30s linear infinite; }
+  .marquee:hover .marquee-track { animation-play-state:paused; }
+  .mq-group { display:flex; align-items:center; gap:34px; padding-right:34px; }
+  .mq-item { display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; white-space:nowrap; }
+  .mq-item img { width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid var(--ink); background:#fff; }
+  @keyframes slide { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+
+  /* treat jar gag */
+  .jar-zone { text-align:center; }
+  .jar-face { width:150px; height:150px; object-fit:cover; border-radius:50%; border:2px solid var(--ink);
+              background:#fff; display:block; margin:6px auto 4px; }
+  .jar-face.pop { animation: facepop .45s cubic-bezier(.2,1.8,.4,1); }
+  @keyframes facepop {
+    0% { transform:scale(.7) rotate(-6deg); }
+    60% { transform:scale(1.14) rotate(3deg); }
+    100% { transform:scale(1) rotate(0); }
+  }
+  button.jar { font-size:64px; line-height:1; background:var(--sun); border:2px solid var(--ink); border-radius:20px;
+               padding:12px 26px 16px; cursor:pointer; box-shadow:0 5px 0 var(--ink); transition:transform .12s ease, box-shadow .12s ease; }
+  button.jar:hover { transform:translateY(-2px) rotate(-2deg); box-shadow:0 7px 0 var(--ink); }
+  button.jar:active { transform:translateY(3px); box-shadow:0 1px 0 var(--ink); }
+  .jar-count { font-size:20px; font-weight:800; margin:14px 0 2px; }
+  .jar-line { color:var(--muted); min-height:1.5em; margin:2px 0 0; }
+
+  @media (max-width:480px) {
+    .orbit { font-size:24px; }
+    .mq-item img { width:46px; height:46px; }
+    button.jar { font-size:54px; }
+  }
+
+  /* respect reduced motion: everything settles, nothing drifts */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation:none !important; transition:none !important; }
+    html.js .reveal { opacity:1; transform:none; }
+    .sky { display:none; }
+  }
 </style>
 </head>
 <body>
+
+<div class="sky" aria-hidden="true">
+  <span style="--x:4%;  --s:20px; --d:31s; --dl:-4s">🐾</span>
+  <span style="--x:14%; --s:15px; --d:38s; --dl:-19s">✦</span>
+  <span style="--x:26%; --s:24px; --d:27s; --dl:-11s">🐾</span>
+  <span style="--x:41%; --s:14px; --d:42s; --dl:-27s">⭐</span>
+  <span style="--x:55%; --s:21px; --d:29s; --dl:-8s">🐾</span>
+  <span style="--x:66%; --s:16px; --d:36s; --dl:-22s">✦</span>
+  <span style="--x:77%; --s:25px; --d:33s; --dl:-15s">🐾</span>
+  <span style="--x:88%; --s:15px; --d:40s; --dl:-31s">⭐</span>
+  <span style="--x:96%; --s:19px; --d:28s; --dl:-2s">🐾</span>
+</div>
+
 <div class="wrap">
 
-  <div class="dots">🟡 🩷 🟢 🔵 🟣</div>
-  <h1>Noodle's Doodle Page</h1>
-  <p class="tag">Noodle is a cat. He wears a beanie indoors, supervises the robot vacuum, and explains AI to kids and their grownups. This is his page. He shares it under protest.</p>
-  <img class="hero" src="hero.jpg" alt="Noodle the cat in his charcoal beanie, staring at a robot vacuum like it owes him money">
+  <div class="dots" aria-hidden="true">🟡 🩷 🟢 🔵 🟣</div>
+  <h1 class="pop-in">Noodle's Doodle Page</h1>
+  <p class="tag pop-in-late">Noodle is a cat. He wears a beanie indoors, supervises the robot vacuum, and explains AI to kids and their grownups. This is his page. He shares it under protest.</p>
+  <div class="hero-stage">
+    <span class="orbit o1" aria-hidden="true">🐾</span>
+    <span class="orbit o2" aria-hidden="true">✨</span>
+    <span class="orbit o3" aria-hidden="true">🧶</span>
+    <span class="orbit o4" aria-hidden="true">🐾</span>
+    <img class="hero" src="hero.jpg" alt="Noodle the cat in his charcoal beanie, staring at a robot vacuum like it owes him money">
+  </div>
   <p class="bn-line">নুডল বলে, আগে নাস্তা, তারপর AI।</p>
   <p class="bn-sub">Bengali. It means: Noodle says snacks first, AI second. He has priorities.</p>
 
-  <h2>The Many Faces of Noodle</h2>
-  <p class="sub">One cat, five moods, zero embarrassment. Collect them all. He already has.</p>
+  <div class="marquee" aria-label="Noodle's expressions on parade">
+    <div class="marquee-track">
+      <div class="mq-group">
+        <span class="mq-item"><img src="face-grumpy.jpg" alt="">Monday Face</span>
+        <span class="mq-item"><img src="face-wink.jpg" alt="">The Wink</span>
+        <span class="mq-item"><img src="face-surprised.jpg" alt="">Wait, It Talks?</span>
+        <span class="mq-item"><img src="face-laugh.jpg" alt="">Treat O'Clock</span>
+        <span class="mq-item"><img src="beanie-back.jpg" alt="">The Famous Beanie</span>
+        <span class="mq-item"><img src="face-grumpy.jpg" alt="">Monday Face, Again</span>
+      </div>
+      <div class="mq-group" aria-hidden="true">
+        <span class="mq-item"><img src="face-grumpy.jpg" alt="">Monday Face</span>
+        <span class="mq-item"><img src="face-wink.jpg" alt="">The Wink</span>
+        <span class="mq-item"><img src="face-surprised.jpg" alt="">Wait, It Talks?</span>
+        <span class="mq-item"><img src="face-laugh.jpg" alt="">Treat O'Clock</span>
+        <span class="mq-item"><img src="beanie-back.jpg" alt="">The Famous Beanie</span>
+        <span class="mq-item"><img src="face-grumpy.jpg" alt="">Monday Face, Again</span>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="reveal">The Many Faces of Noodle</h2>
+  <p class="sub reveal">One cat, five moods, zero embarrassment. Collect them all. He already has.</p>
   <div class="grid">
-    <div class="card">
-      <img src="face-grumpy.jpg" alt="Noodle looking deeply unimpressed">
+    <div class="card reveal">
+      <img src="face-grumpy.jpg" alt="Noodle looking deeply unimpressed" loading="lazy" decoding="async">
       <p><b>Monday Face</b>The treat jar was closed. Nobody consulted him. A full report has been filed with the sofa.</p>
     </div>
-    <div class="card">
-      <img src="face-wink.jpg" alt="Noodle winking with his tongue out">
+    <div class="card reveal">
+      <img src="face-wink.jpg" alt="Noodle winking with his tongue out" loading="lazy" decoding="async">
       <p><b>The Wink</b>He knows where the treats are hidden. He is not telling. This face has ended negotiations before.</p>
     </div>
-    <div class="card">
-      <img src="face-surprised.jpg" alt="Noodle looking very surprised">
+    <div class="card reveal">
+      <img src="face-surprised.jpg" alt="Noodle looking very surprised" loading="lazy" decoding="async">
       <p><b>Wait, It Talks?</b>The little speaker answered him. Out loud. In the kitchen. He has questions and also follow-up questions.</p>
     </div>
-    <div class="card">
-      <img src="face-laugh.jpg" alt="Noodle laughing with his mouth wide open">
+    <div class="card reveal">
+      <img src="face-laugh.jpg" alt="Noodle laughing with his mouth wide open" loading="lazy" decoding="async">
       <p><b>Treat O'Clock</b>Someone said the word "treat" two rooms away. His ears filed the paperwork before his brain did.</p>
     </div>
-    <div class="card">
-      <img src="beanie-back.jpg" alt="The back of Noodle's beanie">
+    <div class="card reveal">
+      <img src="beanie-back.jpg" alt="The back of Noodle's beanie" loading="lazy" decoding="async">
       <p><b>The Beanie, From Behind</b>Still famous. The beanie has its own fan mail. Most of it is from Noodle.</p>
     </div>
   </div>
 
-  <h2>Coloring Corner</h2>
-  <p class="sub">Free. Print it. Color the beanie any color you like. Noodle votes charcoal, but he is not the boss of your crayons.</p>
-  <div class="panel">
-    <img class="art" src="noodle-coloring.png" alt="Noodle coloring page with big bubble letters spelling NOODLE">
+  <h2 class="reveal">The Treat Jar</h2>
+  <p class="sub reveal">Fully interactive. Deeply regrettable. Go on, tap it.</p>
+  <div class="panel jar-zone reveal">
+    <img class="jar-face" id="jarFace" src="face-grumpy.jpg" alt="Noodle's current face">
+    <button class="jar" id="jarBtn" type="button" aria-label="Dispense a treat">🫙</button>
+    <p class="jar-count">Treats dispensed: <span id="jarCount">0</span></p>
+    <p class="jar-line" id="jarLine">The jar is closed. Noodle has noticed. He is being very brave about it.</p>
+  </div>
+
+  <h2 class="reveal">Coloring Corner</h2>
+  <p class="sub reveal">Free. Print it. Color the beanie any color you like. Noodle votes charcoal, but he is not the boss of your crayons.</p>
+  <div class="panel reveal">
+    <img class="art" src="noodle-coloring-preview.png" alt="Noodle coloring page with big bubble letters spelling NOODLE" loading="lazy" decoding="async">
     <p><a class="btn" href="noodle-coloring.png" download>🎨 Download the coloring page</a></p>
     <p>Want the whole coloring pack? Follow <a href="https://www.instagram.com/nionoai/">@nionoai on Instagram</a> and comment <b>TREAT</b> on any post. Noodle sends the pack himself. He types with one paw, so give him a minute.</p>
   </div>
 
-  <h2>Story Time: Chapter 1</h2>
-  <p class="sub">One tiny story about a cat, a jar, and a voice in a box. Read it in English, then hear it in Bengali. Same jar. Same cat.</p>
+  <h2 class="reveal">Story Time: Chapter 1</h2>
+  <p class="sub reveal">One tiny story about a cat, a jar, and a voice in a box. Read it in English, then hear it in Bengali. Same jar. Same cat.</p>
 
-  <div class="panel story-en">
+  <div class="panel story-en reveal">
     <span class="chip">ENGLISH</span>
     <h3>Noodle and the Voice in the Box</h3>
-    <img class="art" src="story-1.jpg" alt="Grumpy Noodle pawing at a tall treat jar">
+    <img class="art" src="story-1.jpg" alt="Grumpy Noodle pawing at a tall treat jar" loading="lazy" decoding="async">
     <p><b>Page 1, Grumpy.</b> Noodle wanted a treat. The jar was too high. Then a voice came out of the little speaker. "Hello, Noodle. How can I help?"</p>
-    <img class="art" src="story-2.jpg" alt="Surprised Noodle listening to the speaker">
+    <img class="art" src="story-2.jpg" alt="Surprised Noodle listening to the speaker" loading="lazy" decoding="async">
     <p><b>Page 2, Surprised.</b> Noodle's eyes went wide. The speaker played his song. It set his treat timer. It even told a joke. A small voice, with big tricks!</p>
-    <img class="art" src="story-3.jpg" alt="Happy Noodle celebrating">
+    <img class="art" src="story-3.jpg" alt="Happy Noodle celebrating" loading="lazy" decoding="async">
     <p><b>Page 3, Joyful.</b> The voice in the box is a virtual assistant. It is AI that listens, thinks, and answers. And it always saves Noodle a dance before treats.</p>
   </div>
 
-  <div class="panel story-bn" lang="bn">
+  <div class="panel story-bn reveal" lang="bn">
     <span class="chip">বাংলা · BENGALI</span>
     <h3>নুডল আর বাক্সের ভেতরের কণ্ঠ</h3>
+    <img class="art" src="story-1.jpg" alt="Grumpy Noodle pawing at a tall treat jar" loading="lazy" decoding="async">
     <p><b>পৃষ্ঠা ১, রাগী।</b> নুডল একটা ট্রিট চাচ্ছিল। কিন্তু বয়ামটা ছিল অনেক উঁচুতে। ঠিক তখনই ছোট্ট স্পিকার থেকে একটা কণ্ঠ ভেসে এলো। "হ্যালো, নুডল। আমি কীভাবে সাহায্য করতে পারি?"</p>
+    <img class="art" src="story-2.jpg" alt="Surprised Noodle listening to the speaker" loading="lazy" decoding="async">
     <p><b>পৃষ্ঠা ২, অবাক।</b> নুডলের চোখ বড় বড় হয়ে গেল। স্পিকারটা তার গান বাজিয়ে দিল। ট্রিটের টাইমার বসিয়ে দিল। এমনকি একটা মজার কৌতুকও শোনালো। ছোট্ট একটা কণ্ঠ, অথচ কত বড় বড় কেরামতি!</p>
+    <img class="art" src="story-3.jpg" alt="Happy Noodle celebrating" loading="lazy" decoding="async">
     <p><b>পৃষ্ঠা ৩, খুশি।</b> বাক্সের ভেতরের এই কণ্ঠটাই হলো ভার্চুয়াল অ্যাসিস্ট্যান্ট। এটা এমন এআই, যে শোনে, ভাবে, আর উত্তর দেয়। আর ট্রিট খাওয়ার আগে নুডলের নাচের জন্য সে সবসময় একটু সময় বাঁচিয়ে রাখে।</p>
     <p>Two words worth stealing: বয়াম (boyam) is the treat jar, and কেরামতি (keramoti) means clever tricks. Now you speak kitchen Bengali.</p>
     <p>🎧 Listen to the chapter, read out loud at 1.5 speed, because Noodle gets excited:</p>
     <audio controls preload="metadata" src="chapter-1-bangla.mp3"></audio>
-    <p>🎬 Or watch it as a tiny video:</p>
-    <video controls preload="none" src="chapter-1-bangla.mp4" poster="story-1.jpg"></video>
   </div>
 
-  <h2>The Book Shelf</h2>
-  <div class="panel">
+  <h2 class="reveal">The Book Shelf</h2>
+  <div class="panel reveal">
     <p><b>Noodle Learns AI</b>, the full pack: 10 chapters of Noodle explaining AI one treat at a time. Printable, made for parents and teachers to read with kids.</p>
     <p>It lands on Gumroad on <b>November 3</b>. Chapter 1 above is free forever, because Noodle believes the first treat is always free.</p>
     <p>
@@ -118,5 +263,51 @@
   <p class="foot">NION AI Art · Noodle approves this page. He has not read it. · <a href="/">nion-hoq.ca</a></p>
 
 </div>
+
+<script>
+  document.documentElement.classList.add('js');
+
+  /* scroll reveal */
+  (function () {
+    var els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12 });
+    els.forEach(function (el) { io.observe(el); });
+  })();
+
+  /* treat jar gag — in-session counter only, nothing stored */
+  (function () {
+    var n = 0;
+    var faces = ['face-laugh.jpg', 'face-surprised.jpg', 'face-wink.jpg'];
+    var lines = [
+      'A treat has been dispensed. Noodle accepts. Barely.',
+      'He heard that from two rooms away. He is already here.',
+      'The beanie approves. The beanie always approves of treats.',
+      'That one was for you. He ate it as a favour.',
+      'Treat logged. Dance pending. It always saves him a dance.',
+      'Somewhere, a robot vacuum feels judged.'
+    ];
+    var btn = document.getElementById('jarBtn');
+    var face = document.getElementById('jarFace');
+    var count = document.getElementById('jarCount');
+    var line = document.getElementById('jarLine');
+    btn.addEventListener('click', function () {
+      n += 1;
+      count.textContent = n;
+      face.src = faces[(n - 1) % faces.length];
+      line.textContent = lines[(n - 1) % lines.length];
+      face.classList.remove('pop');
+      void face.offsetWidth; /* restart the pop animation */
+      face.classList.add('pop');
+    });
+  })();
+</script>
 </body>
 </html>
