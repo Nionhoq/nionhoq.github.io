@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Every EDI Onboarding Is a Data Project | Nion Hoq</title>
+<meta name="description" content="The connection takes an afternoon. The go-live date is decided by item masters, pack sizes, and location lists that disagree. Why every EDI onboarding is really a data cleanup project." />
+<meta name="author" content="Nion Hoq" />
+<link rel="canonical" href="https://nion-hoq.ca/blog/edi-onboarding-data-project.html" />
+<meta property="og:title" content="Every EDI Onboarding Is a Data Project | Nion Hoq" />
+<meta property="og:description" content="The connection takes an afternoon. The go-live date is decided by item masters, pack sizes, and location lists that disagree. Why every EDI onboarding is really a data cleanup project." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nion-hoq.ca/blog/edi-onboarding-data-project.html" />
+<meta property="og:image" content="https://nion-hoq.ca/assets/edi-onboarding-data-project.jpg" />
+<meta property="article:published_time" content="2026-11-18" />
+<meta property="article:author" content="Nion Hoq" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../styles.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Every EDI Onboarding Is a Data Project",
+  "description": "The connection takes an afternoon. The go-live date is decided by item masters, pack sizes, and location lists that disagree. Why every EDI onboarding is really a data cleanup project.",
+  "image": "https://nion-hoq.ca/assets/edi-onboarding-data-project.jpg",
+  "datePublished": "2026-11-18",
+  "author": {"@type": "Person", "name": "Nion Hoq", "url": "https://nion-hoq.ca/"},
+  "mainEntityOfPage": "https://nion-hoq.ca/blog/edi-onboarding-data-project.html"
+}
+</script>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="../index.html"><span class="mark">N</span>Nion Hoq</a>
+      <div class="nav-links" id="navLinks" style="display:flex">
+        <a href="../index.html#blog" class="back-link">← All posts</a>
+        <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+      </div>
+    </nav>
+  </div>
+</header>
+<main>
+  <article>
+    <div class="post-head">
+      <span class="pill"><span class="ping"></span>EDI · Integration</span>
+      <h1>Every EDI Onboarding Is a Data Project</h1>
+      <p class="post-byline">By Nion Hoq · Nov 18, 2026 · 3 min read</p>
+    </div>
+    <div class="post-body">
+      <p><img src="../assets/edi-onboarding-data-project.jpg" alt="Illustration of scattered, mismatched shipping cartons and data records being sorted into an ordered grid" style="width:100%;border-radius:12px" /></p>
+      <p>The connection is the easy part.</p>
+      <p>AS2 or SFTP. Certificates exchanged, endpoints tested, a file moves from one server to the other. In most onboardings I have run, that work takes an afternoon.</p>
+      <p>Then the real work shows up, and it has nothing to do with the connection.</p>
+      <p>The partner's item numbers do not match your item master. Their case quantity is 12, your system expects eaches. Half the ship-to addresses are missing postal codes. The GTIN in the test 856 does not exist in your catalogue. A location code in the file points at a warehouse that closed two years ago, and everyone on the partner's side still uses it.</p>
+      <p>None of that is an integration problem. The pipe works fine. The data inside it disagrees with itself.</p>
+      <p>This is where onboardings actually stall. I have watched go-lives slip by weeks while the project channel kept calling it a mapping issue. It was never the map. A map translates what the data already says. When the item file is wrong, the map faithfully translates the wrong thing, and the failure shows up downstream as a rejected ASN or a receiving dock that cannot match the shipment to the order.</p>
+      <p>The pattern repeats because onboarding plans are written around the technical checklist. Connectivity test. File format test. Mapping sign-off. The data audit, if it happens at all, happens by accident, usually during user acceptance testing, which is the most expensive possible time to find out that two companies count a case differently.</p>
+      <p>So I run onboarding in a different order now.</p>
+      <p>Before the first test file, I ask for three things: the partner's item file, their pack size table, and their location list. We put those next to our own master data and reconcile them on a screen, with a person from each side who can actually decide which value wins. It is unglamorous work. It is also the work the go-live date depends on.</p>
+      <p>Once the data agrees, the rest of the project gets quiet. The mapping is short work because the fields line up. Testing stops producing surprises, because the surprises were in the data and we already met them. The first live ASN goes out and the dock receives against it, which is the only test that matters.</p>
+      <p>There is a wider lesson in this for the AI tools now arriving in integration work. A model can draft the map, check the file, and flag the values that break the pattern. It cannot decide that your partner's case of 12 is your each, or that the closed warehouse code should retire. Those are agreements between two businesses, written in data. Somebody has to make them, out loud, before the automation is worth anything.</p>
+      <p>Connectivity gets the kickoff meeting. Data decides the go-live date.</p>
+    </div>
+    <div class="wrap">
+      <div class="post-cta">
+        <h3>Working on something like this?</h3>
+        <p>I build EDI and AI automation for supply chain teams. If your analysts are reading documents a machine should read first, we should talk.</p>
+        <a href="../index.html#contact" class="btn btn-primary">Work with me →</a>
+      </div>
+    </div>
+  </article>
+</main>
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <span>© <span id="year"></span> Nion Hoq</span>
+    <span>EDI &amp; Supply-Chain Integration · Founder of BrenneBeau · Consultant</span>
+  </div>
+</footer>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+<script data-goatcounter="https://nionhoq.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
